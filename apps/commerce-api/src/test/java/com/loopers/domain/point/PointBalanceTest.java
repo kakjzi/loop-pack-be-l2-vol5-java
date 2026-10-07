@@ -1,13 +1,14 @@
 package com.loopers.domain.point;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class PointBalanceTest {
     @Test
@@ -91,6 +92,7 @@ class PointBalanceTest {
         assertThat(error.getErrorType()).isEqualTo(ErrorType.INVALID_REQUEST);
         assertThat(point.getBalance()).isEqualTo(10_000L);
     }
+
     @Test
     void 기존_잔액_10000원에_5000원을_충전하면_15000원이_된다() {
         // arrange
@@ -103,6 +105,7 @@ class PointBalanceTest {
         // assert
         assertThat(point.getBalance()).isEqualTo(15_000);
     }
+
     @Test
     void 잔액을_초과하는_차감은_잔액_부족으로_거절한다() {
         // arrange

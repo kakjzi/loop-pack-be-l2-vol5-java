@@ -1,13 +1,15 @@
 package com.loopers.interfaces.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
 import com.fasterxml.jackson.databind.JsonNode;
+import com.loopers.application.point.fixture.PointFixture;
 import com.loopers.domain.point.PointBalance;
 import com.loopers.domain.point.PointBalanceRepository;
-import com.loopers.infrastructure.user.UserJpaEntity;
+import com.loopers.infrastructure.user.fixture.UserFixture;
 import com.loopers.interfaces.api.point.ChargePointController.ChargeRequest;
 import com.loopers.utils.DatabaseCleanUp;
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -19,26 +21,17 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
-import org.springframework.transaction.support.TransactionTemplate;
-
-import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class PointApiE2ETest {
-    @Autowired
-    private PointBalanceRepository points;
+    @Autowired private PointFixture fixture;
+    @Autowired private UserFixture users;
 
-    @Autowired
-    private TestRestTemplate rest;
+    @Autowired private PointBalanceRepository points;
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @Autowired private TestRestTemplate rest;
 
-    @Autowired
-    private TransactionTemplate transactions;
-
-    @Autowired
-    private DatabaseCleanUp cleanUp;
+    @Autowired private DatabaseCleanUp cleanUp;
 
     @Test
     void 식별_헤더가_없으면_잔액_조회를_거절한다() {
@@ -50,13 +43,14 @@ class PointApiE2ETest {
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("INVALID_REQUEST");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("INVALID_REQUEST");
     }
 
     @Test
     void 잔액_행이_없으면_숫자_0을_반환하고_저장하지_않는다() {
         // arrange
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
+        users.createUser(1);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
@@ -76,14 +70,15 @@ class PointApiE2ETest {
     @Test
     void 첫_충전_금액을_잔액으로_저장한다() {
         // arrange
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
+        users.createUser(1);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         var request = new HttpEntity<>(new ChargeRequest(10_000L), headers);
 
         // act
-        var response = rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
+        var response =
+                rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(200);
@@ -92,24 +87,22 @@ class PointApiE2ETest {
         assertThat(actualBalance.longValue()).isEqualTo(10_000);
         PointBalance stored = points.findByUserId(1).orElseThrow();
         assertThat(stored.getBalance()).isEqualTo(10_000);
-        assertThat(entityManager.createQuery("select count(e) from PointBalanceJpaEntity e", Long.class)
-            .getSingleResult()).isEqualTo(1);
+        assertThat(fixture.rowCount()).isEqualTo(1);
     }
 
     @Test
     void 기존_잔액_10000원에_5000원을_충전하면_15000원을_저장한다() {
         // arrange
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
-        PointBalance point = PointBalance.empty(1);
-        point.charge(10_000);
-        points.save(point);
+        users.createUser(1);
+        fixture.createBalance(1, 10_000);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         var request = new HttpEntity<>(new ChargeRequest(5_000L), headers);
 
         // act
-        var response = rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
+        var response =
+                rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(200);
@@ -122,10 +115,8 @@ class PointApiE2ETest {
     @Test
     void 저장된_본인_잔액을_조회한다() {
         // arrange
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
-        PointBalance point = PointBalance.empty(1);
-        point.charge(10_000);
-        points.save(point);
+        users.createUser(1);
+        fixture.createBalance(1, 10_000);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
@@ -144,11 +135,9 @@ class PointApiE2ETest {
     @Test
     void 다른_사용자의_잔액은_본인_조회에_포함하지_않는다() {
         // arrange
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(2L)));
-        PointBalance point = PointBalance.empty(1);
-        point.charge(10_000);
-        points.save(point);
+        users.createUser(1);
+        fixture.createBalance(1, 10_000);
+        users.createUser(2);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "2");
@@ -166,21 +155,29 @@ class PointApiE2ETest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"{}", "{\"amount\":null}", "{\"amount\":0}", "{\"amount\":-1}",
-        "{\"amount\":\"oops\"}", "{\"amount\":\"100\"}", "{\"amount\":1.5}", "{\"amount\":9223372036854775808}"})
+    @ValueSource(
+            strings = {
+                "{}",
+                "{\"amount\":null}",
+                "{\"amount\":0}",
+                "{\"amount\":-1}",
+                "{\"amount\":\"oops\"}",
+                "{\"amount\":\"100\"}",
+                "{\"amount\":1.5}",
+                "{\"amount\":9223372036854775808}"
+            })
     void 잘못된_충전_입력은_기존_잔액을_변경하지_않는다(String invalidBody) {
         // arrange
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
-        PointBalance point = PointBalance.empty(1);
-        point.charge(10_000);
-        points.save(point);
+        users.createUser(1);
+        fixture.createBalance(1, 10_000);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         var request = new HttpEntity<>(invalidBody, headers);
 
         // act
-        var response = rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
+        var response =
+                rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
@@ -191,21 +188,21 @@ class PointApiE2ETest {
     @Test
     void 합산_범위를_넘는_충전은_저장된_잔액을_유지한다() {
         // arrange
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
-        PointBalance point = PointBalance.empty(1);
-        point.charge(Long.MAX_VALUE);
-        points.save(point);
+        users.createUser(1);
+        fixture.createBalance(1, Long.MAX_VALUE);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         var request = new HttpEntity<>(new ChargeRequest(1L), headers);
 
         // act
-        var response = rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
+        var response =
+                rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("INVALID_REQUEST");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("INVALID_REQUEST");
         assertThat(points.findByUserId(1).orElseThrow().getBalance()).isEqualTo(Long.MAX_VALUE);
     }
 
@@ -219,12 +216,12 @@ class PointApiE2ETest {
         var request = new HttpEntity<>(new ChargeRequest(100L), headers);
 
         // act
-        var response = rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
+        var response =
+                rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(entityManager.createQuery("select count(e) from PointBalanceJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
+        assertThat(fixture.rowCount()).isZero();
     }
 
     @Test
@@ -236,11 +233,13 @@ class PointApiE2ETest {
         var request = new HttpEntity<>(new ChargeRequest(100L), headers);
 
         // act
-        var response = rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
+        var response =
+                rest.exchange("/api/v1/points/charge", HttpMethod.POST, request, JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("USER_NOT_FOUND");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("USER_NOT_FOUND");
         assertThat(points.findByUserId(999)).isEmpty();
     }
 
