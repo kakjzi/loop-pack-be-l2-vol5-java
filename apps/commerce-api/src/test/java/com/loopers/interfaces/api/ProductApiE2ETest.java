@@ -1,5 +1,15 @@
 package com.loopers.interfaces.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.brand.Brand;
@@ -11,8 +21,10 @@ import com.loopers.domain.product.ProductRepository;
 import com.loopers.infrastructure.user.UserJpaEntity;
 import com.loopers.interfaces.api.product.ProductDto;
 import com.loopers.utils.DatabaseCleanUp;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -28,45 +40,26 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.ZonedDateTime;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class ProductApiE2ETest {
-    @Autowired
-    private ProductLikeRepository likes;
+    @Autowired private ProductLikeRepository likes;
 
-    @Autowired
-    private BrandRepository brands;
+    @Autowired private BrandRepository brands;
 
-    @Autowired
-    private ProductRepository products;
+    @Autowired private ProductRepository products;
 
-    @Autowired
-    private TestRestTemplate rest;
+    @Autowired private TestRestTemplate rest;
 
-    @Autowired
-    private MockMvc mvc;
+    @Autowired private MockMvc mvc;
 
-    @Autowired
-    private ObjectMapper mapper;
+    @Autowired private ObjectMapper mapper;
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @PersistenceContext private EntityManager entityManager;
 
-    @Autowired
-    private TransactionTemplate transactions;
+    @Autowired private TransactionTemplate transactions;
 
-    @Autowired
-    private DatabaseCleanUp cleanUp;
+    @Autowired private DatabaseCleanUp cleanUp;
 
     private static final String ADMIN_PRODUCTS = "/api-admin/v1/products";
 
@@ -76,16 +69,22 @@ class ProductApiE2ETest {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         ProductDto.Create input = new ProductDto.Create(brand.getId(), "상품", 1_000L);
-        var request = post(ADMIN_PRODUCTS)
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(input))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                post(ADMIN_PRODUCTS)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(input))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isCreated()).andExpect(jsonPath("$.data.stock").value(0));
-        long productId = mapper.readTree(response.andReturn().getResponse().getContentAsByteArray()).requiredAt("/data/productId").longValue();
+        long productId =
+                mapper.readTree(response.andReturn().getResponse().getContentAsByteArray())
+                        .requiredAt("/data/productId")
+                        .longValue();
         Product stored = products.findById(productId).orElseThrow();
         assertThat(stored.getBrandId()).isEqualTo(brand.getId());
         assertThat(stored.getStock()).isZero();
@@ -100,16 +99,20 @@ class ProductApiE2ETest {
         product.setStock(5);
         product = products.save(product);
         ProductDto.Update input = new ProductDto.Update("변경", 2_000L);
-        var request = put(ADMIN_PRODUCTS + "/" + product.getId())
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(input))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                put(ADMIN_PRODUCTS + "/" + product.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(input))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isOk()).andExpect(jsonPath("$.data.brandId").value(brand.getId()))
-            .andExpect(jsonPath("$.data.stock").value(5));
+        response.andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.brandId").value(brand.getId()))
+                .andExpect(jsonPath("$.data.stock").value(5));
         Product stored = products.findById(product.getId()).orElseThrow();
         assertThat(stored.getName()).isEqualTo("변경");
         assertThat(stored.getPrice()).isEqualTo(2_000);
@@ -152,9 +155,12 @@ class ProductApiE2ETest {
         product.setStock(5);
         product = products.save(product);
         ProductDto.Stock input = new ProductDto.Stock(stock);
-        var request = put(ADMIN_PRODUCTS + "/" + product.getId() + "/stock")
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(input))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                put(ADMIN_PRODUCTS + "/" + product.getId() + "/stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(input))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -177,14 +183,21 @@ class ProductApiE2ETest {
         older = products.save(older);
         long newerId = newer.getId();
         long olderId = older.getId();
-        transactions.executeWithoutResult(status -> {
-            entityManager.createQuery("update ProductJpaEntity p set p.createdAt=:time where p.id=:id")
-                .setParameter("time", ZonedDateTime.parse("2026-01-02T00:00:00Z"))
-                .setParameter("id", newerId).executeUpdate();
-            entityManager.createQuery("update ProductJpaEntity p set p.createdAt=:time where p.id=:id")
-                .setParameter("time", ZonedDateTime.parse("2026-01-01T00:00:00Z"))
-                .setParameter("id", olderId).executeUpdate();
-        });
+        transactions.executeWithoutResult(
+                status -> {
+                    entityManager
+                            .createQuery(
+                                    "update ProductJpaEntity p set p.createdAt=:time where p.id=:id")
+                            .setParameter("time", ZonedDateTime.parse("2026-01-02T00:00:00Z"))
+                            .setParameter("id", newerId)
+                            .executeUpdate();
+                    entityManager
+                            .createQuery(
+                                    "update ProductJpaEntity p set p.createdAt=:time where p.id=:id")
+                            .setParameter("time", ZonedDateTime.parse("2026-01-01T00:00:00Z"))
+                            .setParameter("id", olderId)
+                            .executeUpdate();
+                });
 
         // act
         var response = rest.getForEntity("/api/v1/products?sort=latest", JsonNode.class);
@@ -193,8 +206,9 @@ class ProductApiE2ETest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         JsonNode items = response.getBody().requiredAt("/data/items");
         assertThat(items.isArray()).isTrue();
-        assertThat(items.findValues("productId")).extracting(JsonNode::longValue)
-            .containsExactly(newer.getId(), older.getId());
+        assertThat(items.findValues("productId"))
+                .extracting(JsonNode::longValue)
+                .containsExactly(newer.getId(), older.getId());
     }
 
     @Test
@@ -208,10 +222,14 @@ class ProductApiE2ETest {
         Product second = Product.create(brand.getId(), "second", 2_000);
         second.setStock(0);
         second = products.save(second);
-        transactions.executeWithoutResult(status -> entityManager
-            .createQuery("update ProductJpaEntity p set p.createdAt=:time where p.brandId=:brandId")
-            .setParameter("time", ZonedDateTime.parse("2026-01-01T00:00:00Z"))
-            .setParameter("brandId", brand.getId()).executeUpdate());
+        transactions.executeWithoutResult(
+                status ->
+                        entityManager
+                                .createQuery(
+                                        "update ProductJpaEntity p set p.createdAt=:time where p.brandId=:brandId")
+                                .setParameter("time", ZonedDateTime.parse("2026-01-01T00:00:00Z"))
+                                .setParameter("brandId", brand.getId())
+                                .executeUpdate());
 
         // act
         var response = rest.getForEntity("/api/v1/products?sort=latest", JsonNode.class);
@@ -220,8 +238,9 @@ class ProductApiE2ETest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         JsonNode items = response.getBody().requiredAt("/data/items");
         assertThat(items.isArray()).isTrue();
-        assertThat(items.findValues("productId")).extracting(JsonNode::longValue)
-            .containsExactly(second.getId(), first.getId());
+        assertThat(items.findValues("productId"))
+                .extracting(JsonNode::longValue)
+                .containsExactly(second.getId(), first.getId());
     }
 
     @Test
@@ -246,8 +265,9 @@ class ProductApiE2ETest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         JsonNode items = response.getBody().requiredAt("/data/items");
         assertThat(items.isArray()).isTrue();
-        assertThat(items.findValues("productId")).extracting(JsonNode::longValue)
-            .containsExactly(newerCheap.getId(), cheap.getId(), expensive.getId());
+        assertThat(items.findValues("productId"))
+                .extracting(JsonNode::longValue)
+                .containsExactly(newerCheap.getId(), cheap.getId(), expensive.getId());
     }
 
     @Test
@@ -278,9 +298,12 @@ class ProductApiE2ETest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         JsonNode items = response.getBody().requiredAt("/data/items");
         assertThat(items.isArray()).isTrue();
-        assertThat(items.findValues("productId")).extracting(JsonNode::longValue)
-            .containsExactly(expensive.getId(), newerCheap.getId(), cheap.getId());
-        assertThat(items.findValues("likeCount")).extracting(JsonNode::longValue).containsExactly(2L, 1L, 1L);
+        assertThat(items.findValues("productId"))
+                .extracting(JsonNode::longValue)
+                .containsExactly(expensive.getId(), newerCheap.getId(), cheap.getId());
+        assertThat(items.findValues("likeCount"))
+                .extracting(JsonNode::longValue)
+                .containsExactly(2L, 1L, 1L);
     }
 
     @Test
@@ -299,13 +322,16 @@ class ProductApiE2ETest {
         newerCheap = products.save(newerCheap);
 
         // act
-        var response = rest.getForEntity("/api/v1/products?sort=price_asc&page=1&size=1", JsonNode.class);
+        var response =
+                rest.getForEntity("/api/v1/products?sort=price_asc&page=1&size=1", JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         JsonNode items = response.getBody().requiredAt("/data/items");
         assertThat(items.isArray()).isTrue();
-        assertThat(items.findValues("productId")).extracting(JsonNode::longValue).containsExactly(cheap.getId());
+        assertThat(items.findValues("productId"))
+                .extracting(JsonNode::longValue)
+                .containsExactly(cheap.getId());
         assertThat(response.getBody().requiredAt("/data/page").intValue()).isEqualTo(1);
         assertThat(response.getBody().requiredAt("/data/totalElements").longValue()).isEqualTo(3);
         assertThat(response.getBody().requiredAt("/data/totalPages").intValue()).isEqualTo(3);
@@ -325,13 +351,16 @@ class ProductApiE2ETest {
         other = products.save(other);
 
         // act
-        var response = rest.getForEntity("/api/v1/products?brandId=" + brand.getId(), JsonNode.class);
+        var response =
+                rest.getForEntity("/api/v1/products?brandId=" + brand.getId(), JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         JsonNode items = response.getBody().requiredAt("/data/items");
         assertThat(items.isArray()).isTrue();
-        assertThat(items.findValues("productId")).extracting(JsonNode::longValue).containsExactly(product.getId());
+        assertThat(items.findValues("productId"))
+                .extracting(JsonNode::longValue)
+                .containsExactly(product.getId());
         assertThat(response.getBody().requiredAt("/data/totalElements").longValue()).isEqualTo(1);
     }
 
@@ -362,8 +391,10 @@ class ProductApiE2ETest {
         Product product = Product.create(brand.getId(), "product", 1_000);
         product.setStock(5);
         product = products.save(product);
-        var request = delete(ADMIN_PRODUCTS + "/" + product.getId())
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                delete(ADMIN_PRODUCTS + "/" + product.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -389,7 +420,8 @@ class ProductApiE2ETest {
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("PRODUCT_NOT_FOUND");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("PRODUCT_NOT_FOUND");
     }
 
     @Test
@@ -423,8 +455,10 @@ class ProductApiE2ETest {
         product = products.save(product);
         product.delete();
         products.save(product);
-        var request = get(ADMIN_PRODUCTS + "/" + product.getId())
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                get(ADMIN_PRODUCTS + "/" + product.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -443,14 +477,14 @@ class ProductApiE2ETest {
         product = products.save(product);
         product.delete();
         products.save(product);
-        var request = get(ADMIN_PRODUCTS)
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request = get(ADMIN_PRODUCTS).with(user("admin").roles("ADMIN")).with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].deleted").value(true));
+        response.andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].deleted").value(true));
     }
 
     @Test
@@ -463,8 +497,10 @@ class ProductApiE2ETest {
         product = products.save(product);
         product.delete();
         products.save(product);
-        var request = delete(ADMIN_PRODUCTS + "/" + product.getId())
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                delete(ADMIN_PRODUCTS + "/" + product.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -484,15 +520,19 @@ class ProductApiE2ETest {
         product = products.save(product);
         product.delete();
         products.save(product);
-        var request = put(ADMIN_PRODUCTS + "/" + product.getId())
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(new ProductDto.Update("변경", 2_000L)))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                put(ADMIN_PRODUCTS + "/" + product.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new ProductDto.Update("변경", 2_000L)))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isBadRequest()).andExpect(jsonPath("$.meta.errorCode").value("PRODUCT_NOT_FOUND"));
+        response.andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.meta.errorCode").value("PRODUCT_NOT_FOUND"));
         Product stored = products.findById(product.getId()).orElseThrow();
         assertThat(stored.getName()).isEqualTo("product");
         assertThat(stored.getPrice()).isEqualTo(1_000);
@@ -508,22 +548,33 @@ class ProductApiE2ETest {
         product = products.save(product);
         product.delete();
         products.save(product);
-        var request = put(ADMIN_PRODUCTS + "/" + product.getId() + "/stock")
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(new ProductDto.Stock(1)))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                put(ADMIN_PRODUCTS + "/" + product.getId() + "/stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new ProductDto.Stock(1)))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isBadRequest()).andExpect(jsonPath("$.meta.errorCode").value("PRODUCT_NOT_FOUND"));
+        response.andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.meta.errorCode").value("PRODUCT_NOT_FOUND"));
         Product stored = products.findById(product.getId()).orElseThrow();
         assertThat(stored.getStock()).isEqualTo(5);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"{}", "{\"name\":\"new\"}", "{\"name\":null,\"price\":1000}", "{\"name\":\"new\",\"price\":0}",
-        "{\"name\":\"new\",\"price\":null}", "{\"name\":\"new\",\"price\":1.5}"})
+    @ValueSource(
+            strings = {
+                "{}",
+                "{\"name\":\"new\"}",
+                "{\"name\":null,\"price\":1000}",
+                "{\"name\":\"new\",\"price\":0}",
+                "{\"name\":\"new\",\"price\":null}",
+                "{\"name\":\"new\",\"price\":1.5}"
+            })
     @DisplayName("잘못된 수정 요청은 상품 정보를 일부만 변경하지 않는다")
     void invalidUpdatePreservesInformation(String invalidBody) throws Exception {
         // arrange
@@ -531,9 +582,12 @@ class ProductApiE2ETest {
         Product product = Product.create(brand.getId(), "product", 1_000);
         product.setStock(5);
         product = products.save(product);
-        var request = put(ADMIN_PRODUCTS + "/" + product.getId())
-            .contentType(MediaType.APPLICATION_JSON).content(invalidBody)
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                put(ADMIN_PRODUCTS + "/" + product.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBody)
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -555,9 +609,12 @@ class ProductApiE2ETest {
         product.setStock(5);
         product = products.save(product);
         String invalidBody = "{\"stock\":" + invalidValue + "}";
-        var request = put(ADMIN_PRODUCTS + "/" + product.getId() + "/stock")
-            .contentType(MediaType.APPLICATION_JSON).content(invalidBody)
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                put(ADMIN_PRODUCTS + "/" + product.getId() + "/stock")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBody)
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -568,7 +625,15 @@ class ProductApiE2ETest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"?page=-1", "?size=0", "?size=101", "?sort=unknown", "?brandId=0", "?brandId=abc"})
+    @ValueSource(
+            strings = {
+                "?page=-1",
+                "?size=0",
+                "?size=101",
+                "?sort=unknown",
+                "?brandId=0",
+                "?brandId=abc"
+            })
     @DisplayName("잘못된 상품 목록 조건을 거절한다")
     void rejectsInvalidListConditions(String query) {
         // arrange
@@ -589,17 +654,24 @@ class ProductApiE2ETest {
         brand.delete(false);
         brands.save(brand);
         ProductDto.Create input = new ProductDto.Create(brand.getId(), "상품", 1_000L);
-        var request = post(ADMIN_PRODUCTS)
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(input))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                post(ADMIN_PRODUCTS)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(input))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isBadRequest()).andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
-        assertThat(entityManager.createQuery("select count(e) from ProductJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
+        response.andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from ProductJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
     }
 
     @Test
@@ -607,17 +679,24 @@ class ProductApiE2ETest {
     void rejectsMissingBrand() throws Exception {
         // arrange
         ProductDto.Create input = new ProductDto.Create(999L, "상품", 1_000L);
-        var request = post(ADMIN_PRODUCTS)
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(input))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                post(ADMIN_PRODUCTS)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(input))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isBadRequest()).andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
-        assertThat(entityManager.createQuery("select count(e) from ProductJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
+        response.andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from ProductJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
     }
 
     @AfterEach

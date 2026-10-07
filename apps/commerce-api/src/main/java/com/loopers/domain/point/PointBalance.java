@@ -2,6 +2,7 @@ package com.loopers.domain.point;
 
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+
 import lombok.Getter;
 
 @Getter

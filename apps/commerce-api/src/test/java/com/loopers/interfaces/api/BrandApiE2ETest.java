@@ -1,5 +1,15 @@
 package com.loopers.interfaces.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.loopers.domain.brand.Brand;
@@ -8,8 +18,10 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductRepository;
 import com.loopers.interfaces.api.brand.BrandDto;
 import com.loopers.utils.DatabaseCleanUp;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -22,39 +34,22 @@ import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class BrandApiE2ETest {
-    @Autowired
-    private BrandRepository brands;
+    @Autowired private BrandRepository brands;
 
-    @Autowired
-    private ProductRepository products;
+    @Autowired private ProductRepository products;
 
-    @Autowired
-    private TestRestTemplate rest;
+    @Autowired private TestRestTemplate rest;
 
-    @Autowired
-    private MockMvc mvc;
+    @Autowired private MockMvc mvc;
 
-    @Autowired
-    private ObjectMapper mapper;
+    @Autowired private ObjectMapper mapper;
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @PersistenceContext private EntityManager entityManager;
 
-    @Autowired
-    private DatabaseCleanUp cleanUp;
+    @Autowired private DatabaseCleanUp cleanUp;
 
     private static final String ADMIN_BRANDS = "/api-admin/v1/brands";
 
@@ -63,16 +58,22 @@ class BrandApiE2ETest {
     void createsBrand() throws Exception {
         // arrange
         BrandDto.Request input = new BrandDto.Request(" 브랜드 ");
-        var request = post(ADMIN_BRANDS)
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(input))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                post(ADMIN_BRANDS)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(input))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isCreated()).andExpect(jsonPath("$.data.name").value("브랜드"));
-        long brandId = mapper.readTree(response.andReturn().getResponse().getContentAsByteArray()).requiredAt("/data/brandId").longValue();
+        long brandId =
+                mapper.readTree(response.andReturn().getResponse().getContentAsByteArray())
+                        .requiredAt("/data/brandId")
+                        .longValue();
         assertThat(brands.findById(brandId).orElseThrow().getName()).isEqualTo("브랜드");
     }
 
@@ -97,9 +98,12 @@ class BrandApiE2ETest {
         // arrange
         Brand brand = brands.save(Brand.create("기존"));
         BrandDto.Request input = new BrandDto.Request("변경");
-        var request = put(ADMIN_BRANDS + "/" + brand.getId())
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(input))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                put(ADMIN_BRANDS + "/" + brand.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(input))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -114,8 +118,10 @@ class BrandApiE2ETest {
     void softDeletesBrand() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
-        var request = delete(ADMIN_BRANDS + "/" + brand.getId())
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                delete(ADMIN_BRANDS + "/" + brand.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -138,7 +144,8 @@ class BrandApiE2ETest {
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("BRAND_NOT_FOUND");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("BRAND_NOT_FOUND");
     }
 
     @Test
@@ -148,8 +155,10 @@ class BrandApiE2ETest {
         Brand brand = brands.save(Brand.create("브랜드"));
         brand.delete(false);
         brands.save(brand);
-        var request = get(ADMIN_BRANDS + "/" + brand.getId())
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                get(ADMIN_BRANDS + "/" + brand.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -165,14 +174,14 @@ class BrandApiE2ETest {
         Brand brand = brands.save(Brand.create("브랜드"));
         brand.delete(false);
         brands.save(brand);
-        var request = get(ADMIN_BRANDS)
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request = get(ADMIN_BRANDS).with(user("admin").roles("ADMIN")).with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isOk()).andExpect(jsonPath("$.data.items[0].deleted").value(true));
+        response.andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items[0].deleted").value(true));
     }
 
     @Test
@@ -182,8 +191,10 @@ class BrandApiE2ETest {
         Brand brand = brands.save(Brand.create("브랜드"));
         brand.delete(false);
         brands.save(brand);
-        var request = delete(ADMIN_BRANDS + "/" + brand.getId())
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                delete(ADMIN_BRANDS + "/" + brand.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -201,16 +212,19 @@ class BrandApiE2ETest {
         brand.delete(false);
         brands.save(brand);
         BrandDto.Request input = new BrandDto.Request("변경");
-        var request = put(ADMIN_BRANDS + "/" + brand.getId())
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(input))
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                put(ADMIN_BRANDS + "/" + brand.getId())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(input))
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
+                .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
         assertThat(brands.findById(brand.getId()).orElseThrow().getName()).isEqualTo("브랜드");
     }
 
@@ -222,15 +236,17 @@ class BrandApiE2ETest {
         Product product = Product.create(brand.getId(), "product", 2_000);
         product.setStock(0);
         product = products.save(product);
-        var request = delete(ADMIN_BRANDS + "/" + brand.getId())
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                delete(ADMIN_BRANDS + "/" + brand.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.meta.errorCode").value("BRAND_HAS_ACTIVE_PRODUCTS"));
+                .andExpect(jsonPath("$.meta.errorCode").value("BRAND_HAS_ACTIVE_PRODUCTS"));
         assertThat(brands.findById(brand.getId()).orElseThrow().isDeleted()).isFalse();
     }
 
@@ -244,8 +260,10 @@ class BrandApiE2ETest {
         product = products.save(product);
         product.delete();
         products.save(product);
-        var request = delete(ADMIN_BRANDS + "/" + brand.getId())
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                delete(ADMIN_BRANDS + "/" + brand.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
@@ -259,15 +277,15 @@ class BrandApiE2ETest {
     @DisplayName("브랜드가 없으면 관리자 목록은 빈 배열이다")
     void readsEmptyAdminList() throws Exception {
         // arrange
-        var request = get(ADMIN_BRANDS)
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request = get(ADMIN_BRANDS).with(user("admin").roles("ADMIN")).with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.items").isArray()).andExpect(jsonPath("$.data.items").isEmpty());
+                .andExpect(jsonPath("$.data.items").isArray())
+                .andExpect(jsonPath("$.data.items").isEmpty());
     }
 
     @Test
@@ -280,70 +298,91 @@ class BrandApiE2ETest {
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isForbidden()).andExpect(jsonPath("$.meta.errorCode").value("ACCESS_DENIED"));
+        response.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.meta.errorCode").value("ACCESS_DENIED"));
     }
 
     @Test
     @DisplayName("일반 사용자는 관리자 목록을 조회할 수 없다")
     void rejectsCustomerRead() throws Exception {
         // arrange
-        var request = get(ADMIN_BRANDS).with(csrf())
-            .with(user("customer").roles("USER"));
+        var request = get(ADMIN_BRANDS).with(csrf()).with(user("customer").roles("USER"));
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isForbidden()).andExpect(jsonPath("$.meta.errorCode").value("ACCESS_DENIED"));
+        response.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.meta.errorCode").value("ACCESS_DENIED"));
     }
 
     @Test
     @DisplayName("CSRF가 있어도 미식별 요청은 브랜드를 등록할 수 없다")
     void rejectsAnonymousWrite() throws Exception {
         // arrange
-        var request = post(ADMIN_BRANDS).with(csrf())
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(new BrandDto.Request("거절")));
+        var request =
+                post(ADMIN_BRANDS)
+                        .with(csrf())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new BrandDto.Request("거절")));
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isForbidden()).andExpect(jsonPath("$.meta.errorCode").value("ACCESS_DENIED"));
-        assertThat(entityManager.createQuery("select count(e) from BrandJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
+        response.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.meta.errorCode").value("ACCESS_DENIED"));
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from BrandJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
     }
 
     @Test
     @DisplayName("CSRF가 있어도 일반 사용자는 브랜드를 등록할 수 없다")
     void rejectsCustomerWrite() throws Exception {
         // arrange
-        var request = post(ADMIN_BRANDS).with(csrf())
-            .with(user("customer").roles("USER"))
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(new BrandDto.Request("거절")));
+        var request =
+                post(ADMIN_BRANDS)
+                        .with(csrf())
+                        .with(user("customer").roles("USER"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new BrandDto.Request("거절")));
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isForbidden()).andExpect(jsonPath("$.meta.errorCode").value("ACCESS_DENIED"));
-        assertThat(entityManager.createQuery("select count(e) from BrandJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
+        response.andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.meta.errorCode").value("ACCESS_DENIED"));
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from BrandJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
     }
 
     @Test
     @DisplayName("관리자라도 CSRF가 없으면 브랜드 등록을 거절한다")
     void rejectsMissingCsrf() throws Exception {
         // arrange
-        var request = post(ADMIN_BRANDS).with(user("admin").roles("ADMIN"))
-            .contentType(MediaType.APPLICATION_JSON).content(mapper.writeValueAsString(new BrandDto.Request("거절")));
+        var request =
+                post(ADMIN_BRANDS)
+                        .with(user("admin").roles("ADMIN"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(mapper.writeValueAsString(new BrandDto.Request("거절")));
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isForbidden());
-        assertThat(entityManager.createQuery("select count(e) from BrandJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from BrandJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
     }
 
     @ParameterizedTest
@@ -351,17 +390,24 @@ class BrandApiE2ETest {
     @DisplayName("빈 브랜드 이름은 저장하지 않는다")
     void rejectsInvalidBrand(String invalidBody) throws Exception {
         // arrange
-        var request = post(ADMIN_BRANDS).contentType(MediaType.APPLICATION_JSON).content(invalidBody)
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                post(ADMIN_BRANDS)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(invalidBody)
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.meta.errorCode").value("INVALID_REQUEST"));
-        assertThat(entityManager.createQuery("select count(e) from BrandJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
+                .andExpect(jsonPath("$.meta.errorCode").value("INVALID_REQUEST"));
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from BrandJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
     }
 
     @ParameterizedTest
@@ -369,45 +415,42 @@ class BrandApiE2ETest {
     @DisplayName("유효하지 않은 페이지 조건을 거절한다")
     void rejectsInvalidPage(String query) throws Exception {
         // arrange
-        var request = get(ADMIN_BRANDS + query)
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request = get(ADMIN_BRANDS + query).with(user("admin").roles("ADMIN")).with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.meta.errorCode").value("INVALID_REQUEST"));
+                .andExpect(jsonPath("$.meta.errorCode").value("INVALID_REQUEST"));
     }
 
     @Test
     @DisplayName("없는 브랜드의 조회를 거절한다")
     void rejectsMissingBrandGet() throws Exception {
         // arrange
-        var request = get(ADMIN_BRANDS + "/999")
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request = get(ADMIN_BRANDS + "/999").with(user("admin").roles("ADMIN")).with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
+                .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
     }
 
     @Test
     @DisplayName("없는 브랜드의 삭제를 거절한다")
     void rejectsMissingBrandDelete() throws Exception {
         // arrange
-        var request = delete(ADMIN_BRANDS + "/999")
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request = delete(ADMIN_BRANDS + "/999").with(user("admin").roles("ADMIN")).with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isBadRequest())
-            .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
+                .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
     }
 
     @AfterEach

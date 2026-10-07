@@ -1,5 +1,14 @@
 package com.loopers.interfaces.api;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
@@ -16,9 +25,11 @@ import com.loopers.infrastructure.user.UserJpaEntity;
 import com.loopers.interfaces.api.order.OrderDto;
 import com.loopers.interfaces.api.point.ChargePointController.ChargeRequest;
 import com.loopers.utils.DatabaseCleanUp;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -40,47 +51,28 @@ import org.springframework.transaction.support.TransactionTemplate;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class OrderApiE2ETest {
-    @Autowired
-    private BrandRepository brands;
+    @Autowired private BrandRepository brands;
 
-    @Autowired
-    private ProductRepository products;
+    @Autowired private ProductRepository products;
 
-    @Autowired
-    private PointBalanceRepository points;
+    @Autowired private PointBalanceRepository points;
 
-    @Autowired
-    private TestRestTemplate rest;
+    @Autowired private TestRestTemplate rest;
 
-    @Autowired
-    private MockMvc mvc;
+    @Autowired private MockMvc mvc;
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @PersistenceContext private EntityManager entityManager;
 
-    @Autowired
-    private TransactionTemplate transactions;
+    @Autowired private TransactionTemplate transactions;
 
-    @Autowired
-    private DatabaseCleanUp cleanUp;
+    @Autowired private DatabaseCleanUp cleanUp;
 
-    @Autowired
-    private OrderRepository orders;
+    @Autowired private OrderRepository orders;
 
-    @MockitoSpyBean
-    private OrderJpaRepository orderJpaRepository;
+    @MockitoSpyBean private OrderJpaRepository orderJpaRepository;
 
     @Test
     @DisplayName("주문 생성은 품목을 합산해 저장하고 재고·잔액을 유지한다")
@@ -100,11 +92,12 @@ class OrderApiE2ETest {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
-        OrderDto.Create input = new OrderDto.Create(List.of(
-            new OrderDto.ItemRequest(product.getId(), 2),
-            new OrderDto.ItemRequest(product.getId(), 1),
-            new OrderDto.ItemRequest(secondProduct.getId(), 1)
-        ));
+        OrderDto.Create input =
+                new OrderDto.Create(
+                        List.of(
+                                new OrderDto.ItemRequest(product.getId(), 2),
+                                new OrderDto.ItemRequest(product.getId(), 1),
+                                new OrderDto.ItemRequest(secondProduct.getId(), 1)));
         var request = new HttpEntity<>(input, headers);
 
         // act
@@ -144,21 +137,38 @@ class OrderApiE2ETest {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         var chargeRequest = new HttpEntity<>(new ChargeRequest(10_000L), headers);
-        var orderRequest = new HttpEntity<>(new OrderDto.Create(List.of(
-            new OrderDto.ItemRequest(product.getId(), 2),
-            new OrderDto.ItemRequest(secondProduct.getId(), 3)
-        )), headers);
+        var orderRequest =
+                new HttpEntity<>(
+                        new OrderDto.Create(
+                                List.of(
+                                        new OrderDto.ItemRequest(product.getId(), 2),
+                                        new OrderDto.ItemRequest(secondProduct.getId(), 3))),
+                        headers);
         HttpEntity<Void> identifiedRequest = new HttpEntity<>(headers);
 
         // act
-        var charged = rest.exchange("/api/v1/points/charge", HttpMethod.POST, chargeRequest, JsonNode.class);
-        var created = rest.exchange("/api/v1/orders", HttpMethod.POST, orderRequest, JsonNode.class);
+        var charged =
+                rest.exchange(
+                        "/api/v1/points/charge", HttpMethod.POST, chargeRequest, JsonNode.class);
+        var created =
+                rest.exchange("/api/v1/orders", HttpMethod.POST, orderRequest, JsonNode.class);
         long orderId = created.getBody().requiredAt("/data/orderId").longValue();
-        var confirmed = rest.exchange("/api/v1/orders/" + orderId + "/confirm", HttpMethod.POST,
-            identifiedRequest, JsonNode.class);
-        var detail = rest.exchange("/api/v1/orders/" + orderId, HttpMethod.GET, identifiedRequest, JsonNode.class);
-        var list = rest.exchange("/api/v1/orders", HttpMethod.GET, identifiedRequest, JsonNode.class);
-        var remaining = rest.exchange("/api/v1/points", HttpMethod.GET, identifiedRequest, JsonNode.class);
+        var confirmed =
+                rest.exchange(
+                        "/api/v1/orders/" + orderId + "/confirm",
+                        HttpMethod.POST,
+                        identifiedRequest,
+                        JsonNode.class);
+        var detail =
+                rest.exchange(
+                        "/api/v1/orders/" + orderId,
+                        HttpMethod.GET,
+                        identifiedRequest,
+                        JsonNode.class);
+        var list =
+                rest.exchange("/api/v1/orders", HttpMethod.GET, identifiedRequest, JsonNode.class);
+        var remaining =
+                rest.exchange("/api/v1/points", HttpMethod.GET, identifiedRequest, JsonNode.class);
 
         // assert
         assertThat(charged.getStatusCode().value()).isEqualTo(200);
@@ -169,11 +179,13 @@ class OrderApiE2ETest {
         assertThat(confirmed.getStatusCode().value()).isEqualTo(200);
         assertThat(confirmed.getBody().requiredAt("/data/status").asText()).isEqualTo("CONFIRMED");
         assertThat(confirmed.getBody().requiredAt("/data/paidAmount").longValue()).isEqualTo(7_000);
-        assertThat(confirmed.getBody().requiredAt("/data/paymentResult").asText()).isEqualTo("SUCCESS");
+        assertThat(confirmed.getBody().requiredAt("/data/paymentResult").asText())
+                .isEqualTo("SUCCESS");
         assertThat(detail.getStatusCode().value()).isEqualTo(200);
         assertThat(detail.getBody()).isEqualTo(confirmed.getBody());
         assertThat(list.getStatusCode().value()).isEqualTo(200);
-        assertThat(list.getBody().requiredAt("/data/items/0")).isEqualTo(confirmed.getBody().requiredAt("/data"));
+        assertThat(list.getBody().requiredAt("/data/items/0"))
+                .isEqualTo(confirmed.getBody().requiredAt("/data"));
         assertThat(remaining.getStatusCode().value()).isEqualTo(200);
         assertThat(remaining.getBody().requiredAt("/data/balance").longValue()).isEqualTo(3_000);
         assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(3);
@@ -193,7 +205,10 @@ class OrderApiE2ETest {
         PointBalance point = PointBalance.empty(1);
         point.charge(10_000);
         points.save(point);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
         product.update("변경", 3_000);
         products.save(product);
         HttpHeaders headers = new HttpHeaders();
@@ -202,8 +217,12 @@ class OrderApiE2ETest {
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(200);
@@ -224,21 +243,32 @@ class OrderApiE2ETest {
         PointBalance point = PointBalance.empty(1);
         point.charge(10_000);
         points.save(point);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         HttpEntity<Void> request = new HttpEntity<>(headers);
-        var first = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
+        var first =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
         assertThat(first.getStatusCode().value()).isEqualTo(200);
         product = products.findById(product.getId()).orElseThrow();
         product.delete();
         products.save(product);
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(200);
@@ -260,7 +290,10 @@ class OrderApiE2ETest {
         PointBalance point = PointBalance.empty(1);
         point.charge(10_000);
         points.save(point);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
         order.confirm();
         orders.save(order);
         HttpHeaders headers = new HttpHeaders();
@@ -269,12 +302,17 @@ class OrderApiE2ETest {
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("ORDER_NOT_FOUND");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("ORDER_NOT_FOUND");
         assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(5);
         assertThat(points.findByUserId(1).orElseThrow().getBalance()).isEqualTo(10_000);
     }
@@ -291,7 +329,10 @@ class OrderApiE2ETest {
         PointBalance point = PointBalance.empty(1);
         point.charge(10_000);
         points.save(point);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
         product.delete();
         products.save(product);
         HttpHeaders headers = new HttpHeaders();
@@ -300,12 +341,17 @@ class OrderApiE2ETest {
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("PRODUCT_NOT_FOUND");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("PRODUCT_NOT_FOUND");
         Order stored = orders.findById(order.getId()).orElseThrow();
         assertThat(stored.getStatus()).isEqualTo(OrderStatus.DRAFT);
         assertThat(stored.getPaidAmount()).isNull();
@@ -329,20 +375,30 @@ class OrderApiE2ETest {
         PointBalance point = PointBalance.empty(1);
         point.charge(10_000);
         points.save(point);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000),
-            new Order.RequestedItem(secondProduct.getId(), 2, 1_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1,
+                                List.of(
+                                        new Order.RequestedItem(product.getId(), 2, 2_000),
+                                        new Order.RequestedItem(secondProduct.getId(), 2, 1_000))));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("INSUFFICIENT_STOCK");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("INSUFFICIENT_STOCK");
         Order stored = orders.findById(order.getId()).orElseThrow();
         assertThat(stored.getStatus()).isEqualTo(OrderStatus.DRAFT);
         assertThat(stored.getPaidAmount()).isNull();
@@ -364,19 +420,27 @@ class OrderApiE2ETest {
         PointBalance point = PointBalance.empty(1);
         point.charge(3_000);
         points.save(point);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("INSUFFICIENT_POINTS");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("INSUFFICIENT_POINTS");
         Order stored = orders.findById(order.getId()).orElseThrow();
         assertThat(stored.getStatus()).isEqualTo(OrderStatus.DRAFT);
         assertThat(stored.getPaidAmount()).isNull();
@@ -394,19 +458,27 @@ class OrderApiE2ETest {
         Product product = Product.create(brand.getId(), "product", 2_000);
         product.setStock(5);
         product = products.save(product);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("INSUFFICIENT_POINTS");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("INSUFFICIENT_POINTS");
         Order stored = orders.findById(order.getId()).orElseThrow();
         assertThat(stored.getStatus()).isEqualTo(OrderStatus.DRAFT);
         assertThat(stored.getPaidAmount()).isNull();
@@ -427,19 +499,29 @@ class OrderApiE2ETest {
         PointBalance point = PointBalance.empty(1);
         point.charge(10_000);
         points.save(point);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "2");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "", HttpMethod.GET, request, JsonNode.class);
-        var missing = rest.exchange("/api/v1/orders/999999", HttpMethod.GET, request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "",
+                        HttpMethod.GET,
+                        request,
+                        JsonNode.class);
+        var missing =
+                rest.exchange("/api/v1/orders/999999", HttpMethod.GET, request, JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("ORDER_NOT_FOUND");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("ORDER_NOT_FOUND");
         assertThat(response.getStatusCode()).isEqualTo(missing.getStatusCode());
         assertThat(response.getBody()).isEqualTo(missing.getBody());
         assertThat(response.getBody().has("data")).isFalse();
@@ -464,20 +546,30 @@ class OrderApiE2ETest {
         PointBalance point = PointBalance.empty(1);
         point.charge(10_000);
         points.save(point);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "2");
         HttpEntity<Void> request = new HttpEntity<>(headers);
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
-        var missing = rest.exchange("/api/v1/orders/999999/confirm", HttpMethod.POST, request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
+        var missing =
+                rest.exchange(
+                        "/api/v1/orders/999999/confirm", HttpMethod.POST, request, JsonNode.class);
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("ORDER_NOT_FOUND");
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("ORDER_NOT_FOUND");
         assertThat(response.getStatusCode()).isEqualTo(missing.getStatusCode());
         assertThat(response.getBody()).isEqualTo(missing.getBody());
         assertThat(response.getBody().has("data")).isFalse();
@@ -499,8 +591,14 @@ class OrderApiE2ETest {
         product.setStock(5);
         product = products.save(product);
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(2L)));
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
-        Order other = orders.save(Order.create(2, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
+        Order other =
+                orders.save(
+                        Order.create(
+                                2, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
@@ -513,7 +611,9 @@ class OrderApiE2ETest {
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         JsonNode items = response.getBody().requiredAt("/data/items");
         assertThat(items.isArray()).isTrue();
-        assertThat(items.findValues("orderId")).extracting(JsonNode::longValue).containsExactly(order.getId());
+        assertThat(items.findValues("orderId"))
+                .extracting(JsonNode::longValue)
+                .containsExactly(order.getId());
         assertThat(items.required(0).has("userId")).isFalse();
     }
 
@@ -527,18 +627,26 @@ class OrderApiE2ETest {
         product.setStock(5);
         product = products.save(product);
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(2L)));
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
-        Order other = orders.save(Order.create(2, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
-        var request = get("/api-admin/v1/orders?userId=2")
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
+        Order other =
+                orders.save(
+                        Order.create(
+                                2, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
+        var request =
+                get("/api-admin/v1/orders?userId=2")
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.totalElements").value(1))
-            .andExpect(jsonPath("$.data.items[0].orderId").value(other.getId()));
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.items[0].orderId").value(other.getId()));
     }
 
     @Test
@@ -550,18 +658,22 @@ class OrderApiE2ETest {
         Product product = Product.create(brand.getId(), "product", 2_000);
         product.setStock(5);
         product = products.save(product);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
-        var request = get("/api-admin/v1/orders?userId=999")
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
+        var request =
+                get("/api-admin/v1/orders?userId=999")
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response
-            .andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.items").isArray())
-            .andExpect(jsonPath("$.data.items").isEmpty());
+        response.andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.items").isArray())
+                .andExpect(jsonPath("$.data.items").isEmpty());
     }
 
     @Test
@@ -573,31 +685,43 @@ class OrderApiE2ETest {
         Product product = Product.create(brand.getId(), "product", 2_000);
         product.setStock(5);
         product = products.save(product);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 1, 2_000))));
         order.confirm();
         orders.save(order);
-        var request = get("/api-admin/v1/orders/" + order.getId())
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                get("/api-admin/v1/orders/" + order.getId())
+                        .with(user("admin").roles("ADMIN"))
+                        .with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
         response.andExpect(status().isOk())
-            .andExpect(jsonPath("$.data.userId").value(1))
-            .andExpect(jsonPath("$.data.items[0].quantity").value(1))
-            .andExpect(jsonPath("$.data.paidAmount").value(2_000))
-            .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
-            .andExpect(jsonPath("$.data.paymentResult").value("SUCCESS"));
+                .andExpect(jsonPath("$.data.userId").value(1))
+                .andExpect(jsonPath("$.data.items[0].quantity").value(1))
+                .andExpect(jsonPath("$.data.paidAmount").value(2_000))
+                .andExpect(jsonPath("$.data.status").value("CONFIRMED"))
+                .andExpect(jsonPath("$.data.paymentResult").value("SUCCESS"));
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"{}", "{\"items\":[]}", "{\"items\":null}", "{\"items\":[null]}",
-        "{\"items\":[{\"productId\":PRODUCT,\"quantity\":0}]}", "{\"items\":[{\"productId\":PRODUCT,\"quantity\":null}]}",
-        "{\"items\":[{\"productId\":PRODUCT,\"quantity\":3},{\"productId\":PRODUCT,\"quantity\":-1}]}",
-        "{\"items\":[{\"productId\":PRODUCT,\"quantity\":2147483648}]}",
-        "{\"items\":[{\"productId\":PRODUCT,\"quantity\":2147483647},{\"productId\":PRODUCT,\"quantity\":1}]}",
-        "{\"items\":[{\"productId\":PRODUCT,\"quantity\":1.5}]}"})
+    @ValueSource(
+            strings = {
+                "{}",
+                "{\"items\":[]}",
+                "{\"items\":null}",
+                "{\"items\":[null]}",
+                "{\"items\":[{\"productId\":PRODUCT,\"quantity\":0}]}",
+                "{\"items\":[{\"productId\":PRODUCT,\"quantity\":null}]}",
+                "{\"items\":[{\"productId\":PRODUCT,\"quantity\":3},{\"productId\":PRODUCT,\"quantity\":-1}]}",
+                "{\"items\":[{\"productId\":PRODUCT,\"quantity\":2147483648}]}",
+                "{\"items\":[{\"productId\":PRODUCT,\"quantity\":2147483647},{\"productId\":PRODUCT,\"quantity\":1}]}",
+                "{\"items\":[{\"productId\":PRODUCT,\"quantity\":1.5}]}"
+            })
     @DisplayName("잘못된 주문 입력은 주문과 품목을 저장하지 않는다")
     void invalidOrderDoesNotPersistPartialState(String invalidBody) {
         // arrange
@@ -620,10 +744,18 @@ class OrderApiE2ETest {
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(entityManager.createQuery("select count(e) from OrderJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
-        assertThat(entityManager.createQuery("select count(item.productId) from OrderJpaEntity o join o.items item", Long.class)
-            .getSingleResult()).isZero();
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from OrderJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
+        assertThat(
+                        entityManager
+                                .createQuery(
+                                        "select count(item.productId) from OrderJpaEntity o join o.items item",
+                                        Long.class)
+                                .getSingleResult())
+                .isZero();
         assertThat(products.findById(product.getId()).orElseThrow().getStock()).isEqualTo(5);
         assertThat(points.findByUserId(1).orElseThrow().getBalance()).isEqualTo(10_000);
     }
@@ -640,7 +772,8 @@ class OrderApiE2ETest {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
-        OrderDto.Create input = new OrderDto.Create(List.of(new OrderDto.ItemRequest(product.getId(), 2)));
+        OrderDto.Create input =
+                new OrderDto.Create(List.of(new OrderDto.ItemRequest(product.getId(), 2)));
         var request = new HttpEntity<>(input, headers);
 
         // act
@@ -648,11 +781,20 @@ class OrderApiE2ETest {
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("ORDER_AMOUNT_OVERFLOW");
-        assertThat(entityManager.createQuery("select count(e) from OrderJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
-        assertThat(entityManager.createQuery("select count(item.productId) from OrderJpaEntity o join o.items item", Long.class)
-            .getSingleResult()).isZero();
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("ORDER_AMOUNT_OVERFLOW");
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from OrderJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
+        assertThat(
+                        entityManager
+                                .createQuery(
+                                        "select count(item.productId) from OrderJpaEntity o join o.items item",
+                                        Long.class)
+                                .getSingleResult())
+                .isZero();
     }
 
     @Test
@@ -677,11 +819,20 @@ class OrderApiE2ETest {
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("PRODUCT_NOT_FOUND");
-        assertThat(entityManager.createQuery("select count(e) from OrderJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
-        assertThat(entityManager.createQuery("select count(item.productId) from OrderJpaEntity o join o.items item", Long.class)
-            .getSingleResult()).isZero();
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("PRODUCT_NOT_FOUND");
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from OrderJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
+        assertThat(
+                        entityManager
+                                .createQuery(
+                                        "select count(item.productId) from OrderJpaEntity o join o.items item",
+                                        Long.class)
+                                .getSingleResult())
+                .isZero();
     }
 
     @Test
@@ -700,11 +851,20 @@ class OrderApiE2ETest {
 
         // assert
         assertThat(response.getStatusCode().value()).isEqualTo(400);
-        assertThat(response.getBody().requiredAt("/meta/errorCode").asText()).isEqualTo("PRODUCT_NOT_FOUND");
-        assertThat(entityManager.createQuery("select count(e) from OrderJpaEntity e", Long.class)
-            .getSingleResult()).isZero();
-        assertThat(entityManager.createQuery("select count(item.productId) from OrderJpaEntity o join o.items item", Long.class)
-            .getSingleResult()).isZero();
+        assertThat(response.getBody().requiredAt("/meta/errorCode").asText())
+                .isEqualTo("PRODUCT_NOT_FOUND");
+        assertThat(
+                        entityManager
+                                .createQuery("select count(e) from OrderJpaEntity e", Long.class)
+                                .getSingleResult())
+                .isZero();
+        assertThat(
+                        entityManager
+                                .createQuery(
+                                        "select count(item.productId) from OrderJpaEntity o join o.items item",
+                                        Long.class)
+                                .getSingleResult())
+                .isZero();
     }
 
     @Test
@@ -719,28 +879,38 @@ class OrderApiE2ETest {
         PointBalance point = PointBalance.empty(1);
         point.charge(10_000);
         points.save(point);
-        Order order = orders.save(Order.create(1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
+        Order order =
+                orders.save(
+                        Order.create(
+                                1, List.of(new Order.RequestedItem(product.getId(), 2, 2_000))));
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.set("X-USER-ID", "1");
         HttpEntity<Void> request = new HttpEntity<>(headers);
         AtomicReference<PersistenceException> databaseFailure = new AtomicReference<>();
         // 관리 중인 주문의 컬럼 길이를 넘겨 실제 DB 저장 오류를 발생시킨다.
-        doAnswer(invocation -> {
-            OrderJpaEntity entity = invocation.getArgument(0);
-            ReflectionTestUtils.setField(entity, "paymentResult", "x".repeat(256));
-            try {
-                entityManager.flush();
-            } catch (PersistenceException exception) {
-                databaseFailure.set(exception);
-                throw exception;
-            }
-            return entity;
-        }).when(orderJpaRepository).save(any(OrderJpaEntity.class));
+        doAnswer(
+                        invocation -> {
+                            OrderJpaEntity entity = invocation.getArgument(0);
+                            ReflectionTestUtils.setField(entity, "paymentResult", "x".repeat(256));
+                            try {
+                                entityManager.flush();
+                            } catch (PersistenceException exception) {
+                                databaseFailure.set(exception);
+                                throw exception;
+                            }
+                            return entity;
+                        })
+                .when(orderJpaRepository)
+                .save(any(OrderJpaEntity.class));
 
         // act
-        var response = rest.exchange("/api/v1/orders/" + order.getId() + "/confirm", HttpMethod.POST,
-            request, JsonNode.class);
+        var response =
+                rest.exchange(
+                        "/api/v1/orders/" + order.getId() + "/confirm",
+                        HttpMethod.POST,
+                        request,
+                        JsonNode.class);
 
         // assert
         assertThat(databaseFailure.get()).isNotNull().hasMessageContaining("payment_result");
@@ -758,14 +928,15 @@ class OrderApiE2ETest {
     @DisplayName("관리자 주문 목록의 잘못된 조회 조건을 거절한다")
     void rejectsInvalidAdminQuery(String query) throws Exception {
         // arrange
-        var request = get("/api-admin/v1/orders" + query)
-            .with(user("admin").roles("ADMIN")).with(csrf());
+        var request =
+                get("/api-admin/v1/orders" + query).with(user("admin").roles("ADMIN")).with(csrf());
 
         // act
         var response = mvc.perform(request);
 
         // assert
-        response.andExpect(status().isBadRequest()).andExpect(jsonPath("$.meta.errorCode").value("INVALID_REQUEST"));
+        response.andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.meta.errorCode").value("INVALID_REQUEST"));
     }
 
     @AfterEach

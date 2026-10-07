@@ -1,5 +1,8 @@
 package com.loopers.application.like;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.loopers.application.product.query.ProductView;
 import com.loopers.application.user.IdentifyUser;
 import com.loopers.domain.like.ProductLike;
@@ -8,6 +11,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
@@ -19,9 +23,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class LikeFacadeTest {
     @Test
@@ -187,8 +188,10 @@ class LikeFacadeTest {
     void returnsOwnList() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1);
-        ProductView expected = new ProductView(10, "상품", 1_000, new ProductView.BrandView(1, "브랜드"), 1);
-        GetLikeFacade facade = new GetLikeFacade(users, id -> id == 1 ? List.of(expected) : List.of());
+        ProductView expected =
+                new ProductView(10, "상품", 1_000, new ProductView.BrandView(1, "브랜드"), 1);
+        GetLikeFacade facade =
+                new GetLikeFacade(users, id -> id == 1 ? List.of(expected) : List.of());
 
         // act
         var result = facade.get(1L, 1);
@@ -224,6 +227,7 @@ class LikeFacadeTest {
         // assert
         assertThat(error.getErrorType()).isEqualTo(ErrorType.ACCESS_DENIED);
     }
+
     private static class FakeLikes implements ProductLikeRepository {
         private final Set<ProductLike> values = new HashSet<>();
 
