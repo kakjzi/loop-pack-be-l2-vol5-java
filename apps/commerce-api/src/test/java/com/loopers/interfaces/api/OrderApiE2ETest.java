@@ -31,7 +31,6 @@ import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.PersistenceException;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -75,8 +74,7 @@ class OrderApiE2ETest {
     @MockitoSpyBean private OrderJpaRepository orderJpaRepository;
 
     @Test
-    @DisplayName("주문 생성은 품목을 합산해 저장하고 재고·잔액을 유지한다")
-    void createsDraftWithoutDeduction() {
+    void 주문_생성은_품목을_합산해_저장하고_재고_잔액을_유지한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -122,8 +120,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("10,000원 충전부터 여러 품목 7,000원 결제·잔액 조회까지 연결된다")
-    void chargeAndCheckoutJourney() {
+    void 충전_10000원부터_여러_품목_7000원_결제와_잔액_조회까지_연결된다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -194,8 +191,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("현재 상품 가격이 바뀌어도 주문 생성 당시 단가로 결제한다")
-    void paysSnapshotPrice() {
+    void 현재_상품_가격이_바뀌어도_주문_생성_당시_단가로_결제한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -232,8 +228,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("확정 후 상품이 삭제되어도 같은 결제 결과를 반환하고 추가 차감하지 않는다")
-    void reusesConfirmationAfterProductDeletion() {
+    void 확정_후_상품이_삭제되어도_같은_결제_결과를_반환하고_추가_차감하지_않는다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -278,8 +273,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("확정된 주문도 다른 사용자에게 결제 결과를 반환하지 않는다")
-    void checksOwnerBeforeReusingConfirmation() {
+    void 확정된_주문도_다른_사용자에게_결제_결과를_반환하지_않는다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -318,8 +312,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("확정 전 상품이 삭제되면 주문·재고·잔액을 유지한다")
-    void rejectsDeletedProductBeforeFirstConfirmation() {
+    void 확정_전_상품이_삭제되면_주문_재고_잔액을_유지한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -361,8 +354,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("두 번째 상품 재고가 부족하면 첫 번째 상품 차감도 롤백한다")
-    void rollsBackFirstStockWhenSecondStockIsInsufficient() {
+    void 두_번째_상품_재고가_부족하면_첫_번째_상품_차감도_롤백한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -409,8 +401,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("잔액 부족은 상품 차감을 롤백하고 기존 잔액을 유지한다")
-    void rollsBackStockWhenBalanceIsInsufficient() {
+    void 잔액_부족은_상품_차감을_롤백하고_기존_잔액을_유지한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -450,8 +441,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("잔액 행이 없으면 결제를 거절하고 행을 새로 만들지 않는다")
-    void missingBalanceDoesNotPersistFailedPayment() {
+    void 잔액_행이_없으면_결제를_거절하고_행을_새로_만들지_않는다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -487,8 +477,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("타인 주문과 없는 주문의 상세 조회 거절 응답은 동일하다")
-    void foreignAndMissingOrdersMatchForGet() {
+    void 타인_주문과_없는_주문의_상세_조회_거절_응답은_동일하다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -534,8 +523,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("타인 주문과 없는 주문의 확정 거절 응답은 동일하다")
-    void foreignAndMissingOrdersMatchForPost() {
+    void 타인_주문과_없는_주문의_확정_거절_응답은_동일하다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -582,8 +570,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("고객 목록에는 본인 주문만 반환하고 구매자 식별자를 노출하지 않는다")
-    void listsOnlyOwnOrders() {
+    void 고객_목록에는_본인_주문만_반환하고_구매자_식별자를_노출하지_않는다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -618,8 +605,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("관리자는 구매자별 주문 목록을 조회한다")
-    void adminFiltersByBuyer() throws Exception {
+    void 관리자는_구매자별_주문_목록을_조회한다() throws Exception {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -650,8 +636,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("구매자에 해당하는 주문이 없으면 빈 배열을 반환한다")
-    void adminReturnsEmptyListForUnknownBuyer() throws Exception {
+    void 구매자에_해당하는_주문이_없으면_빈_배열을_반환한다() throws Exception {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -677,8 +662,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("관리자 상세는 구매자·품목·결제 결과를 반환한다")
-    void adminReadsPaymentDetail() throws Exception {
+    void 관리자_상세는_구매자_품목_결제_결과를_반환한다() throws Exception {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -722,8 +706,7 @@ class OrderApiE2ETest {
                 "{\"items\":[{\"productId\":PRODUCT,\"quantity\":2147483647},{\"productId\":PRODUCT,\"quantity\":1}]}",
                 "{\"items\":[{\"productId\":PRODUCT,\"quantity\":1.5}]}"
             })
-    @DisplayName("잘못된 주문 입력은 주문과 품목을 저장하지 않는다")
-    void invalidOrderDoesNotPersistPartialState(String invalidBody) {
+    void 잘못된_주문_입력은_주문과_품목을_저장하지_않는다(String invalidBody) {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -761,8 +744,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("주문 금액이 long 범위를 넘으면 주문과 품목을 저장하지 않는다")
-    void rejectsAmountOverflow() {
+    void 주문_금액이_long_범위를_넘으면_주문과_품목을_저장하지_않는다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -798,8 +780,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 상품으로 주문을 생성할 수 없다")
-    void rejectsDeletedProductAtCreation() {
+    void 삭제한_상품으로_주문을_생성할_수_없다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -836,8 +817,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("없는 상품으로 주문을 생성할 수 없다")
-    void rejectsMissingProductAtCreation() {
+    void 없는_상품으로_주문을_생성할_수_없다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         HttpHeaders headers = new HttpHeaders();
@@ -868,8 +848,7 @@ class OrderApiE2ETest {
     }
 
     @Test
-    @DisplayName("주문 저장 중 DB 오류가 발생하면 모든 결제 변경을 롤백한다")
-    void databaseFailureRollsBackPayment() {
+    void 주문_저장_중_DB_오류가_발생하면_모든_결제_변경을_롤백한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -925,8 +904,7 @@ class OrderApiE2ETest {
 
     @ParameterizedTest
     @ValueSource(strings = {"?page=-1", "?size=0", "?size=101", "?userId=0"})
-    @DisplayName("관리자 주문 목록의 잘못된 조회 조건을 거절한다")
-    void rejectsInvalidAdminQuery(String query) throws Exception {
+    void 관리자_주문_목록의_잘못된_조회_조건을_거절한다(String query) throws Exception {
         // arrange
         var request =
                 get("/api-admin/v1/orders" + query).with(user("admin").roles("ADMIN")).with(csrf());

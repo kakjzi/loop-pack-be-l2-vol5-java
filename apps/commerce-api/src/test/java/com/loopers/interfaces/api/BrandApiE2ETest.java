@@ -23,7 +23,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -54,8 +53,7 @@ class BrandApiE2ETest {
     private static final String ADMIN_BRANDS = "/api-admin/v1/brands";
 
     @Test
-    @DisplayName("브랜드 등록 결과와 저장한 이름이 일치한다")
-    void createsBrand() throws Exception {
+    void 브랜드_등록_결과와_저장한_이름이_일치한다() throws Exception {
         // arrange
         BrandDto.Request input = new BrandDto.Request(" 브랜드 ");
         var request =
@@ -78,8 +76,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("고객은 식별 없이 브랜드 이름을 조회한다")
-    void readsPublicBrand() {
+    void 고객은_식별_없이_브랜드_이름을_조회한다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
 
@@ -93,8 +90,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("브랜드 수정 결과를 저장한다")
-    void updatesBrand() throws Exception {
+    void 브랜드_수정_결과를_저장한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("기존"));
         BrandDto.Request input = new BrandDto.Request("변경");
@@ -114,8 +110,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("브랜드 삭제는 행을 보존하고 삭제 상태를 저장한다")
-    void softDeletesBrand() throws Exception {
+    void 브랜드_삭제는_행을_보존하고_삭제_상태를_저장한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         var request =
@@ -132,8 +127,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제된 브랜드는 고객 상세 조회를 거절한다")
-    void hidesDeletedBrandFromCustomer() {
+    void 삭제된_브랜드는_고객_상세_조회를_거절한다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         brand.delete(false);
@@ -149,8 +143,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("관리자는 삭제한 브랜드 상세를 조회한다")
-    void adminReadsDeletedBrand() throws Exception {
+    void 관리자는_삭제한_브랜드_상세를_조회한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         brand.delete(false);
@@ -168,8 +161,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("관리자 목록에는 삭제한 브랜드가 포함된다")
-    void adminListsDeletedBrand() throws Exception {
+    void 관리자_목록에는_삭제한_브랜드가_포함된다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         brand.delete(false);
@@ -185,8 +177,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("이미 삭제한 브랜드의 삭제 재요청은 성공한다")
-    void repeatsDeletion() throws Exception {
+    void 이미_삭제한_브랜드의_삭제_재요청은_성공한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         brand.delete(false);
@@ -205,8 +196,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 브랜드의 수정은 이름을 바꾸지 않는다")
-    void rejectsRenameAfterDeletion() throws Exception {
+    void 삭제한_브랜드의_수정은_이름을_바꾸지_않는다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         brand.delete(false);
@@ -229,8 +219,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("재고가 0이어도 미삭제 상품이 있으면 브랜드를 삭제할 수 없다")
-    void activeProductBlocksDeletion() throws Exception {
+    void 재고가_0이어도_미삭제_상품이_있으면_브랜드를_삭제할_수_없다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 2_000);
@@ -251,8 +240,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("연결 상품이 모두 삭제되면 브랜드를 삭제할 수 있다")
-    void deletedProductDoesNotBlockDeletion() throws Exception {
+    void 연결_상품이_모두_삭제되면_브랜드를_삭제할_수_있다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 2_000);
@@ -274,8 +262,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("브랜드가 없으면 관리자 목록은 빈 배열이다")
-    void readsEmptyAdminList() throws Exception {
+    void 브랜드가_없으면_관리자_목록은_빈_배열이다() throws Exception {
         // arrange
         var request = get(ADMIN_BRANDS).with(user("admin").roles("ADMIN")).with(csrf());
 
@@ -289,8 +276,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("미식별 요청은 관리자 목록을 조회할 수 없다")
-    void rejectsAnonymousRead() throws Exception {
+    void 미식별_요청은_관리자_목록을_조회할_수_없다() throws Exception {
         // arrange
         var request = get(ADMIN_BRANDS).with(csrf());
 
@@ -303,8 +289,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("일반 사용자는 관리자 목록을 조회할 수 없다")
-    void rejectsCustomerRead() throws Exception {
+    void 일반_사용자는_관리자_목록을_조회할_수_없다() throws Exception {
         // arrange
         var request = get(ADMIN_BRANDS).with(csrf()).with(user("customer").roles("USER"));
 
@@ -317,8 +302,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("CSRF가 있어도 미식별 요청은 브랜드를 등록할 수 없다")
-    void rejectsAnonymousWrite() throws Exception {
+    void CSRF가_있어도_미식별_요청은_브랜드를_등록할_수_없다() throws Exception {
         // arrange
         var request =
                 post(ADMIN_BRANDS)
@@ -340,8 +324,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("CSRF가 있어도 일반 사용자는 브랜드를 등록할 수 없다")
-    void rejectsCustomerWrite() throws Exception {
+    void CSRF가_있어도_일반_사용자는_브랜드를_등록할_수_없다() throws Exception {
         // arrange
         var request =
                 post(ADMIN_BRANDS)
@@ -364,8 +347,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("관리자라도 CSRF가 없으면 브랜드 등록을 거절한다")
-    void rejectsMissingCsrf() throws Exception {
+    void 관리자라도_CSRF가_없으면_브랜드_등록을_거절한다() throws Exception {
         // arrange
         var request =
                 post(ADMIN_BRANDS)
@@ -387,8 +369,7 @@ class BrandApiE2ETest {
 
     @ParameterizedTest
     @ValueSource(strings = {"{}", "{\"name\":null}", "{\"name\":\" \"}"})
-    @DisplayName("빈 브랜드 이름은 저장하지 않는다")
-    void rejectsInvalidBrand(String invalidBody) throws Exception {
+    void 빈_브랜드_이름은_저장하지_않는다(String invalidBody) throws Exception {
         // arrange
         var request =
                 post(ADMIN_BRANDS)
@@ -412,8 +393,7 @@ class BrandApiE2ETest {
 
     @ParameterizedTest
     @ValueSource(strings = {"?page=-1", "?size=0", "?size=101"})
-    @DisplayName("유효하지 않은 페이지 조건을 거절한다")
-    void rejectsInvalidPage(String query) throws Exception {
+    void 유효하지_않은_페이지_조건을_거절한다(String query) throws Exception {
         // arrange
         var request = get(ADMIN_BRANDS + query).with(user("admin").roles("ADMIN")).with(csrf());
 
@@ -426,8 +406,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("없는 브랜드의 조회를 거절한다")
-    void rejectsMissingBrandGet() throws Exception {
+    void 없는_브랜드의_조회를_거절한다() throws Exception {
         // arrange
         var request = get(ADMIN_BRANDS + "/999").with(user("admin").roles("ADMIN")).with(csrf());
 
@@ -440,8 +419,7 @@ class BrandApiE2ETest {
     }
 
     @Test
-    @DisplayName("없는 브랜드의 삭제를 거절한다")
-    void rejectsMissingBrandDelete() throws Exception {
+    void 없는_브랜드의_삭제를_거절한다() throws Exception {
         // arrange
         var request = delete(ADMIN_BRANDS + "/999").with(user("admin").roles("ADMIN")).with(csrf());
 

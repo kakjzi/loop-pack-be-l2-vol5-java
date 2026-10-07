@@ -9,7 +9,6 @@ import com.loopers.utils.DatabaseCleanUp;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -42,8 +41,7 @@ class PointApiE2ETest {
     private DatabaseCleanUp cleanUp;
 
     @Test
-    @DisplayName("식별 헤더가 없으면 잔액 조회를 거절한다")
-    void rejectsMissingIdentity() {
+    void 식별_헤더가_없으면_잔액_조회를_거절한다() {
         // arrange
         HttpEntity<Void> request = new HttpEntity<>(new HttpHeaders());
 
@@ -56,8 +54,7 @@ class PointApiE2ETest {
     }
 
     @Test
-    @DisplayName("잔액 행이 없으면 숫자 0을 반환하고 저장하지 않는다")
-    void readsZeroWithoutCreatingBalance() {
+    void 잔액_행이_없으면_숫자_0을_반환하고_저장하지_않는다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         HttpHeaders headers = new HttpHeaders();
@@ -77,8 +74,7 @@ class PointApiE2ETest {
     }
 
     @Test
-    @DisplayName("첫 충전 금액을 잔액으로 저장한다")
-    void persistsFirstCharge() {
+    void 첫_충전_금액을_잔액으로_저장한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         HttpHeaders headers = new HttpHeaders();
@@ -101,8 +97,7 @@ class PointApiE2ETest {
     }
 
     @Test
-    @DisplayName("기존 10,000원에 5,000원을 충전하면 15,000원을 저장한다")
-    void addsChargeToStoredBalance() {
+    void 기존_잔액_10000원에_5000원을_충전하면_15000원을_저장한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         PointBalance point = PointBalance.empty(1);
@@ -125,8 +120,7 @@ class PointApiE2ETest {
     }
 
     @Test
-    @DisplayName("저장된 본인 잔액을 조회한다")
-    void readsStoredBalance() {
+    void 저장된_본인_잔액을_조회한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         PointBalance point = PointBalance.empty(1);
@@ -148,8 +142,7 @@ class PointApiE2ETest {
     }
 
     @Test
-    @DisplayName("다른 사용자의 잔액은 본인 조회에 포함하지 않는다")
-    void readsOnlyRequestersBalance() {
+    void 다른_사용자의_잔액은_본인_조회에_포함하지_않는다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(2L)));
@@ -175,8 +168,7 @@ class PointApiE2ETest {
     @ParameterizedTest
     @ValueSource(strings = {"{}", "{\"amount\":null}", "{\"amount\":0}", "{\"amount\":-1}",
         "{\"amount\":\"oops\"}", "{\"amount\":\"100\"}", "{\"amount\":1.5}", "{\"amount\":9223372036854775808}"})
-    @DisplayName("잘못된 충전 입력은 기존 잔액을 변경하지 않는다")
-    void rejectsInvalidChargeWithoutChangingBalance(String invalidBody) {
+    void 잘못된_충전_입력은_기존_잔액을_변경하지_않는다(String invalidBody) {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         PointBalance point = PointBalance.empty(1);
@@ -197,8 +189,7 @@ class PointApiE2ETest {
     }
 
     @Test
-    @DisplayName("합산 범위를 넘는 충전은 저장된 잔액을 유지한다")
-    void rejectsOverflowWithoutChangingBalance() {
+    void 합산_범위를_넘는_충전은_저장된_잔액을_유지한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         PointBalance point = PointBalance.empty(1);
@@ -220,8 +211,7 @@ class PointApiE2ETest {
 
     @ParameterizedTest
     @ValueSource(strings = {"0", "-1", "abc", "9223372036854775808"})
-    @DisplayName("유효하지 않은 사용자 식별자로 충전할 수 없다")
-    void rejectsInvalidIdentity(String identity) {
+    void 유효하지_않은_사용자_식별자로_충전할_수_없다(String identity) {
         // arrange
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -238,8 +228,7 @@ class PointApiE2ETest {
     }
 
     @Test
-    @DisplayName("존재하지 않는 사용자는 충전할 수 없다")
-    void rejectsUnknownUser() {
+    void 존재하지_않는_사용자는_충전할_수_없다() {
         // arrange
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);

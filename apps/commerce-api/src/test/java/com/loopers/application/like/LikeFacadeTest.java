@@ -12,7 +12,6 @@ import com.loopers.domain.product.ProductRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,8 +25,7 @@ import java.util.Set;
 
 class LikeFacadeTest {
     @Test
-    @DisplayName("등록하면 요청자와 상품의 관계가 생긴다")
-    void registersRelation() {
+    void 등록하면_요청자와_상품의_관계가_생긴다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         FakeLikes likes = new FakeLikes();
@@ -43,8 +41,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("등록된 관계의 재요청은 관계를 추가하지 않는다")
-    void repeatedRegistrationKeepsOneRelation() {
+    void 등록된_관계의_재요청은_관계를_추가하지_않는다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         FakeLikes likes = new FakeLikes();
@@ -61,8 +58,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("취소하면 본인 관계만 제거한다")
-    void cancelOnlyRemovesOwnRelation() {
+    void 취소하면_본인_관계만_제거한다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         FakeLikes likes = new FakeLikes();
@@ -78,8 +74,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("본인 관계가 없어도 다른 사용자의 관계를 유지한다")
-    void absentRelationCanBeCancelled() {
+    void 본인_관계가_없어도_다른_사용자의_관계를_유지한다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         FakeLikes likes = new FakeLikes();
@@ -94,8 +89,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("삭제된 상품은 기존 관계가 있어도 등록을 거절한다")
-    void deletedProductRejectsRegistration() {
+    void 삭제된_상품은_기존_관계가_있어도_등록을_거절한다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         FakeLikes likes = new FakeLikes();
@@ -114,8 +108,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("취소는 상품 조회 없이 저장된 본인 관계를 제거한다")
-    void cancelsWithoutProductLookup() {
+    void 취소는_상품_조회_없이_저장된_본인_관계를_제거한다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         FakeLikes likes = new FakeLikes();
@@ -130,8 +123,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("없는 상품은 등록할 수 없다")
-    void rejectsMissingProduct() {
+    void 없는_상품은_등록할_수_없다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         FakeLikes likes = new FakeLikes();
@@ -148,8 +140,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("없는 사용자는 등록할 수 없다")
-    void rejectsMissingUser() {
+    void 없는_사용자는_등록할_수_없다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         FakeLikes likes = new FakeLikes();
@@ -166,8 +157,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("식별 누락은 등록할 수 없다")
-    void rejectsMissingIdentity() {
+    void 식별_누락은_등록할_수_없다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         FakeLikes likes = new FakeLikes();
@@ -184,8 +174,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("본인의 좋아요 목록을 반환한다")
-    void returnsOwnList() {
+    void 본인의_좋아요_목록을_반환한다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1);
         ProductView expected =
@@ -201,8 +190,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("본인 좋아요가 없으면 빈 목록을 반환한다")
-    void returnsEmptyOwnList() {
+    void 본인_좋아요가_없으면_빈_목록을_반환한다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1);
         GetLikeFacade facade = new GetLikeFacade(users, id -> List.of());
@@ -215,8 +203,7 @@ class LikeFacadeTest {
     }
 
     @Test
-    @DisplayName("타인 목록 접근은 권한 오류로 거절한다")
-    void rejectsForeignList() {
+    void 타인_목록_접근은_권한_오류로_거절한다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1 || id == 2);
         GetLikeFacade facade = new GetLikeFacade(users, id -> List.of());

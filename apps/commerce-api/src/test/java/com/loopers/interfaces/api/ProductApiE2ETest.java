@@ -26,7 +26,6 @@ import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -64,8 +63,7 @@ class ProductApiE2ETest {
     private static final String ADMIN_PRODUCTS = "/api-admin/v1/products";
 
     @Test
-    @DisplayName("유효한 브랜드의 상품을 초기 재고 0개로 저장한다")
-    void createsProduct() throws Exception {
+    void 유효한_브랜드의_상품을_초기_재고_0개로_저장한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         ProductDto.Create input = new ProductDto.Create(brand.getId(), "상품", 1_000L);
@@ -91,8 +89,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("상품 정보 수정은 브랜드와 재고를 유지한다")
-    void updatesInformation() throws Exception {
+    void 상품_정보_수정은_브랜드와_재고를_유지한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -121,8 +118,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("고객 상세에는 저장된 상품·브랜드·좋아요 수를 반환하고 재고는 숨긴다")
-    void readsCurrentProductInformation() {
+    void 고객_상세에는_저장된_상품_브랜드_좋아요_수를_반환하고_재고는_숨긴다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -147,8 +143,7 @@ class ProductApiE2ETest {
 
     @ParameterizedTest
     @ValueSource(ints = {0, Integer.MAX_VALUE})
-    @DisplayName("재고 변경은 0부터 int 상한까지 최종 수량을 저장한다")
-    void setsFinalStock(int stock) throws Exception {
+    void 재고_변경은_0부터_int_상한까지_최종_수량을_저장한다(int stock) throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -171,8 +166,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("최신순은 ID보다 생성 시각을 먼저 비교한다")
-    void sortsLatestByCreationTime() {
+    void 최신순은_ID보다_생성_시각을_먼저_비교한다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product newer = Product.create(brand.getId(), "newer", 2_000);
@@ -212,8 +206,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("생성 시각이 같으면 ID 역순으로 조회한다")
-    void breaksLatestTiesByDescendingId() {
+    void 생성_시각이_같으면_ID_역순으로_조회한다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product first = Product.create(brand.getId(), "first", 2_000);
@@ -244,8 +237,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("낮은 가격부터 조회하고 같은 가격이면 ID 역순으로 조회한다")
-    void sortsByPriceAndDescendingId() {
+    void 낮은_가격부터_조회하고_같은_가격이면_ID_역순으로_조회한다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product expensive = Product.create(brand.getId(), "expensive", 3_000);
@@ -271,8 +263,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("좋아요 수가 많은 순서로 조회하고 동률이면 ID 역순으로 조회한다")
-    void sortsByLikesAndDescendingId() {
+    void 좋아요_수가_많은_순서로_조회하고_동률이면_ID_역순으로_조회한다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product expensive = Product.create(brand.getId(), "expensive", 3_000);
@@ -307,8 +298,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("가격 정렬은 전체 상품에 적용한 뒤 페이지를 나눈다")
-    void paginatesAfterSorting() {
+    void 가격_정렬은_전체_상품에_적용한_뒤_페이지를_나눈다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product expensive = Product.create(brand.getId(), "expensive", 3_000);
@@ -338,8 +328,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("브랜드 필터는 다른 브랜드 상품을 제외한다")
-    void filtersByBrand() {
+    void 브랜드_필터는_다른_브랜드_상품을_제외한다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -365,8 +354,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("없는 브랜드 필터의 결과는 빈 배열이다")
-    void returnsEmptyListForMissingBrand() {
+    void 없는_브랜드_필터의_결과는_빈_배열이다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -384,8 +372,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("상품 삭제는 행을 보존하고 삭제 상태를 저장한다")
-    void softDeletesProduct() throws Exception {
+    void 상품_삭제는_행을_보존하고_삭제_상태를_저장한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -405,8 +392,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 상품의 고객 상세 조회는 거절한다")
-    void hidesDeletedDetail() {
+    void 삭제한_상품의_고객_상세_조회는_거절한다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -425,8 +411,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 상품은 고객 목록에서 제외한다")
-    void excludesDeletedProductsFromList() {
+    void 삭제한_상품은_고객_목록에서_제외한다() {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -446,8 +431,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("관리자는 삭제한 상품 상세를 조회한다")
-    void adminReadsDeletedProduct() throws Exception {
+    void 관리자는_삭제한_상품_상세를_조회한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -468,8 +452,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("관리자 목록에는 삭제한 상품이 포함된다")
-    void adminListsDeletedProduct() throws Exception {
+    void 관리자_목록에는_삭제한_상품이_포함된다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -488,8 +471,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 상품의 삭제 재요청은 성공한다")
-    void repeatsDeletion() throws Exception {
+    void 삭제한_상품의_삭제_재요청은_성공한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -511,8 +493,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 상품의 정보 변경을 거절한다")
-    void rejectsUpdateAfterDeletion() throws Exception {
+    void 삭제한_상품의_정보_변경을_거절한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -539,8 +520,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 상품의 재고 변경을 거절한다")
-    void rejectsStockChangeAfterDeletion() throws Exception {
+    void 삭제한_상품의_재고_변경을_거절한다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -575,8 +555,7 @@ class ProductApiE2ETest {
                 "{\"name\":\"new\",\"price\":null}",
                 "{\"name\":\"new\",\"price\":1.5}"
             })
-    @DisplayName("잘못된 수정 요청은 상품 정보를 일부만 변경하지 않는다")
-    void invalidUpdatePreservesInformation(String invalidBody) throws Exception {
+    void 잘못된_수정_요청은_상품_정보를_일부만_변경하지_않는다(String invalidBody) throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -601,8 +580,7 @@ class ProductApiE2ETest {
 
     @ParameterizedTest
     @ValueSource(strings = {"-1", "2147483648", "1.5", "null", "\"2\""})
-    @DisplayName("잘못된 재고 입력은 기존 수량을 유지한다")
-    void invalidStockPreservesQuantity(String invalidValue) throws Exception {
+    void 잘못된_재고_입력은_기존_수량을_유지한다(String invalidValue) throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         Product product = Product.create(brand.getId(), "product", 1_000);
@@ -634,8 +612,7 @@ class ProductApiE2ETest {
                 "?brandId=0",
                 "?brandId=abc"
             })
-    @DisplayName("잘못된 상품 목록 조건을 거절한다")
-    void rejectsInvalidListConditions(String query) {
+    void 잘못된_상품_목록_조건을_거절한다(String query) {
         // arrange
         String path = "/api/v1/products" + query;
 
@@ -647,8 +624,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제된 브랜드에는 상품을 등록할 수 없다")
-    void rejectsDeletedBrand() throws Exception {
+    void 삭제된_브랜드에는_상품을_등록할_수_없다() throws Exception {
         // arrange
         Brand brand = brands.save(Brand.create("브랜드"));
         brand.delete(false);
@@ -675,8 +651,7 @@ class ProductApiE2ETest {
     }
 
     @Test
-    @DisplayName("없는 브랜드에는 상품을 등록할 수 없다")
-    void rejectsMissingBrand() throws Exception {
+    void 없는_브랜드에는_상품을_등록할_수_없다() throws Exception {
         // arrange
         ProductDto.Create input = new ProductDto.Create(999L, "상품", 1_000L);
         var request =

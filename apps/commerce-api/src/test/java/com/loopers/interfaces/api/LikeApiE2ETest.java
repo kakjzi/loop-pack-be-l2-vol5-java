@@ -12,7 +12,6 @@ import com.loopers.utils.DatabaseCleanUp;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -51,8 +50,7 @@ class LikeApiE2ETest {
     private DatabaseCleanUp cleanUp;
 
     @Test
-    @DisplayName("좋아요 등록은 요청자와 상품의 관계를 저장한다")
-    void registersRelation() {
+    void 좋아요_등록은_요청자와_상품의_관계를_저장한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -77,8 +75,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("이미 등록한 좋아요를 다시 등록해도 관계는 하나다")
-    void repeatedRegistrationKeepsOneRelation() {
+    void 이미_등록한_좋아요를_다시_등록해도_관계는_하나다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -103,8 +100,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("상품의 좋아요 수는 저장된 사용자 관계 수와 같다")
-    void readsLikeCountFromRelations() {
+    void 상품의_좋아요_수는_저장된_사용자_관계_수와_같다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -126,8 +122,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("DB는 같은 사용자와 상품의 중복 관계를 거절한다")
-    void databaseRejectsDuplicateRelation() {
+    void DB는_같은_사용자와_상품의_중복_관계를_거절한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -146,8 +141,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("좋아요 취소는 본인 관계를 제거한다")
-    void cancelsOwnRelation() {
+    void 좋아요_취소는_본인_관계를_제거한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -172,8 +166,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("본인 관계가 없는 상품의 취소도 성공한다")
-    void absentRelationCancellationSucceeds() {
+    void 본인_관계가_없는_상품의_취소도_성공한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -196,8 +189,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("좋아요 취소는 다른 사용자의 관계를 유지한다")
-    void cancellationPreservesOtherUsersRelation() {
+    void 좋아요_취소는_다른_사용자의_관계를_유지한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -223,8 +215,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("내 좋아요 목록에는 내가 등록한 상품만 나온다")
-    void readsOnlyOwnLikedProducts() {
+    void 내_좋아요_목록에는_내가_등록한_상품만_나온다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -253,8 +244,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("다른 사용자의 좋아요 목록은 접근 거절로 응답한다")
-    void rejectsOtherUsersList() {
+    void 다른_사용자의_좋아요_목록은_접근_거절로_응답한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(2L)));
@@ -272,8 +262,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 상품에는 기존 관계가 있어도 등록할 수 없다")
-    void rejectsRegistrationOnDeletedProduct() {
+    void 삭제한_상품에는_기존_관계가_있어도_등록할_수_없다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -300,8 +289,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 상품은 내 좋아요 목록에서 제외하고 관계는 보존한다")
-    void excludesDeletedProductsFromOwnList() {
+    void 삭제한_상품은_내_좋아요_목록에서_제외하고_관계는_보존한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -329,8 +317,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("삭제한 상품에 남은 본인 관계를 취소할 수 있다")
-    void cancelsRelationOnDeletedProduct() {
+    void 삭제한_상품에_남은_본인_관계를_취소할_수_있다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -357,8 +344,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("없는 상품의 좋아요 등록을 거절한다")
-    void rejectsMissingProduct() {
+    void 없는_상품의_좋아요_등록을_거절한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         HttpHeaders headers = new HttpHeaders();
@@ -377,8 +363,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("유효한 상품이라도 식별 헤더가 없으면 등록할 수 없다")
-    void rejectsMissingIdentityForExistingProduct() {
+    void 유효한_상품이라도_식별_헤더가_없으면_등록할_수_없다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
@@ -399,8 +384,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("없는 상품의 없는 관계를 취소해도 성공한다")
-    void cancelsAbsentRelationForMissingProduct() {
+    void 없는_상품의_없는_관계를_취소해도_성공한다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         HttpHeaders headers = new HttpHeaders();
@@ -418,8 +402,7 @@ class LikeApiE2ETest {
     }
 
     @Test
-    @DisplayName("좋아요 취소 결과는 공개 상품의 좋아요 수에 반영된다")
-    void cancellationUpdatesPublicCount() {
+    void 좋아요_취소_결과는_공개_상품의_좋아요_수에_반영된다() {
         // arrange
         transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
         Brand brand = brands.save(Brand.create("브랜드"));
