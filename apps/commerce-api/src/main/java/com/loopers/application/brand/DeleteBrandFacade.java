@@ -2,6 +2,7 @@ package com.loopers.application.brand;
 
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
+import com.loopers.domain.product.ProductRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 
@@ -15,14 +16,17 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 public class DeleteBrandFacade {
     private final BrandRepository repository;
-    private final BrandProductLookup products;
+    private final ProductRepository products;
 
     public void delete(long id) {
         Brand brand =
                 repository
-                        .findById(id)
+                        .findByIdForUpdate(id)
                         .orElseThrow(() -> new CoreException(ErrorType.BRAND_NOT_FOUND));
-        brand.delete(!brand.isDeleted() && products.hasActiveProducts(id));
+        for (long productId : products.findActiveIdsByBrandId(id)) {
+            products.delete(productId);
+        }
+        brand.delete();
         repository.save(brand);
     }
 }

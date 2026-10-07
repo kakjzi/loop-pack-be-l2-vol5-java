@@ -13,16 +13,16 @@ import org.junit.jupiter.params.provider.ValueSource;
 
 class BrandTest {
     @Test
-    void 미삭제_상품이_있으면_브랜드_삭제를_거절한다() {
+    void 브랜드_삭제는_이름을_보존하고_삭제_상태만_변경한다() {
         // arrange
         Brand brand = Brand.create("브랜드");
 
         // act
-        CoreException error = assertThrows(CoreException.class, () -> brand.delete(true));
+        brand.delete();
 
         // assert
-        assertThat(error.getErrorType()).isEqualTo(ErrorType.BRAND_HAS_ACTIVE_PRODUCTS);
-        assertThat(brand.isDeleted()).isFalse();
+        assertThat(brand.getName()).isEqualTo("브랜드");
+        assertThat(brand.isDeleted()).isTrue();
     }
 
     @Test
@@ -31,7 +31,7 @@ class BrandTest {
         Brand brand = Brand.create("브랜드");
 
         // act
-        brand.delete(false);
+        brand.delete();
 
         // assert
         assertThat(brand.isDeleted()).isTrue();
@@ -41,10 +41,10 @@ class BrandTest {
     void 이미_삭제한_브랜드를_다시_삭제해도_성공한다() {
         // arrange
         Brand brand = Brand.create("브랜드");
-        brand.delete(false);
+        brand.delete();
 
         // act
-        brand.delete(false);
+        brand.delete();
 
         // assert
         assertThat(brand.isDeleted()).isTrue();
@@ -54,7 +54,7 @@ class BrandTest {
     void 삭제된_브랜드는_이름을_바꿀_수_없다() {
         // arrange
         Brand brand = Brand.create("브랜드");
-        brand.delete(false);
+        brand.delete();
 
         // act
         CoreException error = assertThrows(CoreException.class, () -> brand.rename("변경"));

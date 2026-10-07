@@ -22,7 +22,7 @@ public class CreateProductFacade {
         if (brandId == null || brandId <= 0 || price == null) {
             throw new CoreException(ErrorType.INVALID_REQUEST);
         }
-        brands.findById(brandId)
+        brands.findByIdForUpdate(brandId)
                 .orElseThrow(() -> new CoreException(ErrorType.BRAND_NOT_FOUND))
                 .requireActive();
         return ProductInfo.from(repository.save(Product.create(brandId, name, price)));

@@ -30,13 +30,7 @@ public class Brand {
         this.name = validName(name);
     }
 
-    public void delete(boolean hasActiveProducts) {
-        if (deleted) {
-            return;
-        }
-        if (hasActiveProducts) {
-            throw new CoreException(ErrorType.BRAND_HAS_ACTIVE_PRODUCTS);
-        }
+    public void delete() {
         deleted = true;
     }
 

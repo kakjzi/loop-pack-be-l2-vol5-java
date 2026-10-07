@@ -25,6 +25,11 @@ public class BrandRepositoryImpl implements BrandRepository {
     }
 
     @Override
+    public Optional<Brand> findByIdForUpdate(long id) {
+        return repository.findForUpdateById(id).map(BrandJpaEntity::toDomain);
+    }
+
+    @Override
     public Brand save(Brand brand) {
         BrandJpaEntity entity =
                 brand.getId() == null

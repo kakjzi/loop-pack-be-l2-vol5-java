@@ -24,7 +24,7 @@ public class BrandFixture {
 
     public void deleteBrand(long id) {
         Brand brand = brands.findById(id).orElseThrow();
-        brand.delete(false);
+        brand.delete();
         brands.save(brand);
     }
 
