@@ -25,6 +25,6 @@ public class SetStockProductFacade {
                         .findById(id)
                         .orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
         product.setStock(stock);
-        return ProductInfo.from(repository.save(product));
+        return ProductInfo.from(repository.setStock(id, stock));
     }
 }

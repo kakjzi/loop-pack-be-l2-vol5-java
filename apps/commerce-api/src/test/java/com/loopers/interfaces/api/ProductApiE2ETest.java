@@ -12,18 +12,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.loopers.application.brand.fixture.BrandFixture;
+import com.loopers.application.like.fixture.LikeFixture;
 import com.loopers.domain.brand.Brand;
-import com.loopers.domain.brand.BrandRepository;
-import com.loopers.domain.like.ProductLike;
-import com.loopers.domain.like.ProductLikeRepository;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductRepository;
-import com.loopers.infrastructure.user.UserJpaEntity;
+import com.loopers.infrastructure.product.fixture.ProductFixture;
+import com.loopers.infrastructure.user.fixture.UserFixture;
 import com.loopers.interfaces.api.product.ProductDto;
 import com.loopers.utils.DatabaseCleanUp;
-
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -35,16 +32,18 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.ZonedDateTime;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class ProductApiE2ETest {
-    @Autowired private ProductLikeRepository likes;
+    @Autowired private ProductFixture fixture;
+    @Autowired private UserFixture users;
 
-    @Autowired private BrandRepository brands;
+    @Autowired private LikeFixture likes;
+
+    @Autowired private BrandFixture brands;
 
     @Autowired private ProductRepository products;
 
@@ -54,10 +53,6 @@ class ProductApiE2ETest {
 
     @Autowired private ObjectMapper mapper;
 
-    @PersistenceContext private EntityManager entityManager;
-
-    @Autowired private TransactionTemplate transactions;
-
     @Autowired private DatabaseCleanUp cleanUp;
 
     private static final String ADMIN_PRODUCTS = "/api-admin/v1/products";
@@ -65,7 +60,7 @@ class ProductApiE2ETest {
     @Test
     void 유효한_브랜드의_상품을_초기_재고_0개로_저장한다() throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
+        Brand brand = brands.createBrand("브랜드");
         ProductDto.Create input = new ProductDto.Create(brand.getId(), "상품", 1_000L);
         var request =
                 post(ADMIN_PRODUCTS)
@@ -91,10 +86,8 @@ class ProductApiE2ETest {
     @Test
     void 상품_정보_수정은_브랜드와_재고를_유지한다() throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
         ProductDto.Update input = new ProductDto.Update("변경", 2_000L);
         var request =
                 put(ADMIN_PRODUCTS + "/" + product.getId())
@@ -120,12 +113,9 @@ class ProductApiE2ETest {
     @Test
     void 고객_상세에는_저장된_상품_브랜드_좋아요_수를_반환하고_재고는_숨긴다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
-        product.update("변경", 2_000);
-        products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
+        fixture.updateProduct(product.getId(), "변경", 2_000);
 
         // act
         var response = rest.getForEntity("/api/v1/products/" + product.getId(), JsonNode.class);
@@ -145,10 +135,8 @@ class ProductApiE2ETest {
     @ValueSource(ints = {0, Integer.MAX_VALUE})
     void 재고_변경은_0부터_int_상한까지_최종_수량을_저장한다(int stock) throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
         ProductDto.Stock input = new ProductDto.Stock(stock);
         var request =
                 put(ADMIN_PRODUCTS + "/" + product.getId() + "/stock")
@@ -168,30 +156,13 @@ class ProductApiE2ETest {
     @Test
     void 최신순은_ID보다_생성_시각을_먼저_비교한다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product newer = Product.create(brand.getId(), "newer", 2_000);
-        newer.setStock(0);
-        newer = products.save(newer);
-        Product older = Product.create(brand.getId(), "older", 2_000);
-        older.setStock(0);
-        older = products.save(older);
+        Brand brand = brands.createBrand("브랜드");
+        Product newer = fixture.createProduct(brand.getId(), "newer", 2_000, 0);
+        Product older = fixture.createProduct(brand.getId(), "older", 2_000, 0);
         long newerId = newer.getId();
         long olderId = older.getId();
-        transactions.executeWithoutResult(
-                status -> {
-                    entityManager
-                            .createQuery(
-                                    "update ProductJpaEntity p set p.createdAt=:time where p.id=:id")
-                            .setParameter("time", ZonedDateTime.parse("2026-01-02T00:00:00Z"))
-                            .setParameter("id", newerId)
-                            .executeUpdate();
-                    entityManager
-                            .createQuery(
-                                    "update ProductJpaEntity p set p.createdAt=:time where p.id=:id")
-                            .setParameter("time", ZonedDateTime.parse("2026-01-01T00:00:00Z"))
-                            .setParameter("id", olderId)
-                            .executeUpdate();
-                });
+        fixture.createdAt(newerId, ZonedDateTime.parse("2026-01-02T00:00:00Z"));
+        fixture.createdAt(olderId, ZonedDateTime.parse("2026-01-01T00:00:00Z"));
 
         // act
         var response = rest.getForEntity("/api/v1/products?sort=latest", JsonNode.class);
@@ -208,21 +179,10 @@ class ProductApiE2ETest {
     @Test
     void 생성_시각이_같으면_ID_역순으로_조회한다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product first = Product.create(brand.getId(), "first", 2_000);
-        first.setStock(0);
-        first = products.save(first);
-        Product second = Product.create(brand.getId(), "second", 2_000);
-        second.setStock(0);
-        second = products.save(second);
-        transactions.executeWithoutResult(
-                status ->
-                        entityManager
-                                .createQuery(
-                                        "update ProductJpaEntity p set p.createdAt=:time where p.brandId=:brandId")
-                                .setParameter("time", ZonedDateTime.parse("2026-01-01T00:00:00Z"))
-                                .setParameter("brandId", brand.getId())
-                                .executeUpdate());
+        Brand brand = brands.createBrand("브랜드");
+        Product first = fixture.createProduct(brand.getId(), "first", 2_000, 0);
+        Product second = fixture.createProduct(brand.getId(), "second", 2_000, 0);
+        fixture.createdAtForBrand(brand.getId(), ZonedDateTime.parse("2026-01-01T00:00:00Z"));
 
         // act
         var response = rest.getForEntity("/api/v1/products?sort=latest", JsonNode.class);
@@ -239,16 +199,10 @@ class ProductApiE2ETest {
     @Test
     void 낮은_가격부터_조회하고_같은_가격이면_ID_역순으로_조회한다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product expensive = Product.create(brand.getId(), "expensive", 3_000);
-        expensive.setStock(0);
-        expensive = products.save(expensive);
-        Product cheap = Product.create(brand.getId(), "cheap", 1_000);
-        cheap.setStock(0);
-        cheap = products.save(cheap);
-        Product newerCheap = Product.create(brand.getId(), "newerCheap", 1_000);
-        newerCheap.setStock(0);
-        newerCheap = products.save(newerCheap);
+        Brand brand = brands.createBrand("브랜드");
+        Product expensive = fixture.createProduct(brand.getId(), "expensive", 3_000, 0);
+        Product cheap = fixture.createProduct(brand.getId(), "cheap", 1_000, 0);
+        Product newerCheap = fixture.createProduct(brand.getId(), "newerCheap", 1_000, 0);
 
         // act
         var response = rest.getForEntity("/api/v1/products?sort=price_asc", JsonNode.class);
@@ -265,22 +219,16 @@ class ProductApiE2ETest {
     @Test
     void 좋아요_수가_많은_순서로_조회하고_동률이면_ID_역순으로_조회한다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product expensive = Product.create(brand.getId(), "expensive", 3_000);
-        expensive.setStock(0);
-        expensive = products.save(expensive);
-        Product cheap = Product.create(brand.getId(), "cheap", 1_000);
-        cheap.setStock(0);
-        cheap = products.save(cheap);
-        Product newerCheap = Product.create(brand.getId(), "newerCheap", 1_000);
-        newerCheap.setStock(0);
-        newerCheap = products.save(newerCheap);
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(1L)));
-        transactions.executeWithoutResult(status -> entityManager.persist(new UserJpaEntity(2L)));
-        likes.save(new ProductLike(1, expensive.getId()));
-        likes.save(new ProductLike(2, expensive.getId()));
-        likes.save(new ProductLike(1, cheap.getId()));
-        likes.save(new ProductLike(1, newerCheap.getId()));
+        Brand brand = brands.createBrand("브랜드");
+        Product expensive = fixture.createProduct(brand.getId(), "expensive", 3_000, 0);
+        Product cheap = fixture.createProduct(brand.getId(), "cheap", 1_000, 0);
+        Product newerCheap = fixture.createProduct(brand.getId(), "newerCheap", 1_000, 0);
+        users.createUser(1);
+        users.createUser(2);
+        likes.createLike(1, expensive.getId());
+        likes.createLike(2, expensive.getId());
+        likes.createLike(1, cheap.getId());
+        likes.createLike(1, newerCheap.getId());
 
         // act
         var response = rest.getForEntity("/api/v1/products?sort=likes_desc", JsonNode.class);
@@ -300,16 +248,10 @@ class ProductApiE2ETest {
     @Test
     void 가격_정렬은_전체_상품에_적용한_뒤_페이지를_나눈다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product expensive = Product.create(brand.getId(), "expensive", 3_000);
-        expensive.setStock(0);
-        expensive = products.save(expensive);
-        Product cheap = Product.create(brand.getId(), "cheap", 1_000);
-        cheap.setStock(0);
-        cheap = products.save(cheap);
-        Product newerCheap = Product.create(brand.getId(), "newerCheap", 1_000);
-        newerCheap.setStock(0);
-        newerCheap = products.save(newerCheap);
+        Brand brand = brands.createBrand("브랜드");
+        Product expensive = fixture.createProduct(brand.getId(), "expensive", 3_000, 0);
+        Product cheap = fixture.createProduct(brand.getId(), "cheap", 1_000, 0);
+        Product newerCheap = fixture.createProduct(brand.getId(), "newerCheap", 1_000, 0);
 
         // act
         var response =
@@ -330,14 +272,10 @@ class ProductApiE2ETest {
     @Test
     void 브랜드_필터는_다른_브랜드_상품을_제외한다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
-        Brand otherBrand = brands.save(Brand.create("다른 브랜드"));
-        Product other = Product.create(otherBrand.getId(), "other", 2_000);
-        other.setStock(5);
-        other = products.save(other);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
+        Brand otherBrand = brands.createBrand("다른 브랜드");
+        Product other = fixture.createProduct(otherBrand.getId(), "other", 2_000, 5);
 
         // act
         var response =
@@ -356,10 +294,8 @@ class ProductApiE2ETest {
     @Test
     void 없는_브랜드_필터의_결과는_빈_배열이다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
 
         // act
         var response = rest.getForEntity("/api/v1/products?brandId=999", JsonNode.class);
@@ -374,10 +310,8 @@ class ProductApiE2ETest {
     @Test
     void 상품_삭제는_행을_보존하고_삭제_상태를_저장한다() throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
         var request =
                 delete(ADMIN_PRODUCTS + "/" + product.getId())
                         .with(user("admin").roles("ADMIN"))
@@ -394,12 +328,9 @@ class ProductApiE2ETest {
     @Test
     void 삭제한_상품의_고객_상세_조회는_거절한다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
-        product.delete();
-        products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
+        fixture.deleteProduct(product.getId());
 
         // act
         var response = rest.getForEntity("/api/v1/products/" + product.getId(), JsonNode.class);
@@ -413,12 +344,9 @@ class ProductApiE2ETest {
     @Test
     void 삭제한_상품은_고객_목록에서_제외한다() {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
-        product.delete();
-        products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
+        fixture.deleteProduct(product.getId());
 
         // act
         var response = rest.getForEntity("/api/v1/products", JsonNode.class);
@@ -433,12 +361,9 @@ class ProductApiE2ETest {
     @Test
     void 관리자는_삭제한_상품_상세를_조회한다() throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
-        product.delete();
-        products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
+        fixture.deleteProduct(product.getId());
         var request =
                 get(ADMIN_PRODUCTS + "/" + product.getId())
                         .with(user("admin").roles("ADMIN"))
@@ -454,12 +379,9 @@ class ProductApiE2ETest {
     @Test
     void 관리자_목록에는_삭제한_상품이_포함된다() throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
-        product.delete();
-        products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
+        fixture.deleteProduct(product.getId());
         var request = get(ADMIN_PRODUCTS).with(user("admin").roles("ADMIN")).with(csrf());
 
         // act
@@ -473,12 +395,9 @@ class ProductApiE2ETest {
     @Test
     void 삭제한_상품의_삭제_재요청은_성공한다() throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
-        product.delete();
-        products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
+        fixture.deleteProduct(product.getId());
         var request =
                 delete(ADMIN_PRODUCTS + "/" + product.getId())
                         .with(user("admin").roles("ADMIN"))
@@ -495,12 +414,9 @@ class ProductApiE2ETest {
     @Test
     void 삭제한_상품의_정보_변경을_거절한다() throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
-        product.delete();
-        products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
+        fixture.deleteProduct(product.getId());
         var request =
                 put(ADMIN_PRODUCTS + "/" + product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -522,12 +438,9 @@ class ProductApiE2ETest {
     @Test
     void 삭제한_상품의_재고_변경을_거절한다() throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
-        product.delete();
-        products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
+        fixture.deleteProduct(product.getId());
         var request =
                 put(ADMIN_PRODUCTS + "/" + product.getId() + "/stock")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -557,10 +470,8 @@ class ProductApiE2ETest {
             })
     void 잘못된_수정_요청은_상품_정보를_일부만_변경하지_않는다(String invalidBody) throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
         var request =
                 put(ADMIN_PRODUCTS + "/" + product.getId())
                         .contentType(MediaType.APPLICATION_JSON)
@@ -582,10 +493,8 @@ class ProductApiE2ETest {
     @ValueSource(strings = {"-1", "2147483648", "1.5", "null", "\"2\""})
     void 잘못된_재고_입력은_기존_수량을_유지한다(String invalidValue) throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        Product product = Product.create(brand.getId(), "product", 1_000);
-        product.setStock(5);
-        product = products.save(product);
+        Brand brand = brands.createBrand("브랜드");
+        Product product = fixture.createProduct(brand.getId(), "product", 1_000, 5);
         String invalidBody = "{\"stock\":" + invalidValue + "}";
         var request =
                 put(ADMIN_PRODUCTS + "/" + product.getId() + "/stock")
@@ -626,9 +535,8 @@ class ProductApiE2ETest {
     @Test
     void 삭제된_브랜드에는_상품을_등록할_수_없다() throws Exception {
         // arrange
-        Brand brand = brands.save(Brand.create("브랜드"));
-        brand.delete(false);
-        brands.save(brand);
+        Brand brand = brands.createBrand("브랜드");
+        brands.deleteBrand(brand.getId());
         ProductDto.Create input = new ProductDto.Create(brand.getId(), "상품", 1_000L);
         var request =
                 post(ADMIN_PRODUCTS)
@@ -643,11 +551,7 @@ class ProductApiE2ETest {
         // assert
         response.andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
-        assertThat(
-                        entityManager
-                                .createQuery("select count(e) from ProductJpaEntity e", Long.class)
-                                .getSingleResult())
-                .isZero();
+        assertThat(fixture.rowCount()).isZero();
     }
 
     @Test
@@ -667,11 +571,7 @@ class ProductApiE2ETest {
         // assert
         response.andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.meta.errorCode").value("BRAND_NOT_FOUND"));
-        assertThat(
-                        entityManager
-                                .createQuery("select count(e) from ProductJpaEntity e", Long.class)
-                                .getSingleResult())
-                .isZero();
+        assertThat(fixture.rowCount()).isZero();
     }
 
     @AfterEach

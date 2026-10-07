@@ -45,17 +45,13 @@ public class Product {
 
     public void setStock(int stock) {
         requireActive();
-        if (stock < 0) {
-            throw new CoreException(ErrorType.INVALID_REQUEST);
-        }
+        validateStock(stock);
         this.stock = stock;
     }
 
     public void deductStock(int quantity) {
         requireActive();
-        if (quantity <= 0) {
-            throw new CoreException(ErrorType.INVALID_REQUEST);
-        }
+        validateQuantity(quantity);
         if (quantity > stock) {
             throw new CoreException(ErrorType.INSUFFICIENT_STOCK);
         }
@@ -64,6 +60,18 @@ public class Product {
 
     public void delete() {
         deleted = true;
+    }
+
+    public static void validateStock(int stock) {
+        if (stock < 0) {
+            throw new CoreException(ErrorType.INVALID_REQUEST);
+        }
+    }
+
+    public static void validateQuantity(int quantity) {
+        if (quantity <= 0) {
+            throw new CoreException(ErrorType.INVALID_REQUEST);
+        }
     }
 
     public void requireActive() {

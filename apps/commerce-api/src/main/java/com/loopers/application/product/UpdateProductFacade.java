@@ -25,6 +25,6 @@ public class UpdateProductFacade {
                         .findById(id)
                         .orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
         product.update(name, price);
-        return ProductInfo.from(repository.save(product));
+        return ProductInfo.from(repository.updateInformation(product));
     }
 }

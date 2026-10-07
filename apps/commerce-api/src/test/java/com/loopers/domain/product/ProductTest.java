@@ -1,14 +1,15 @@
 package com.loopers.domain.product;
 
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
+
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.NullAndEmptySource;
 import org.junit.jupiter.params.provider.ValueSource;
-
-import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 class ProductTest {
     @Test
@@ -72,7 +73,8 @@ class ProductTest {
         product.setStock(5);
 
         // act
-        CoreException error = assertThrows(CoreException.class, () -> product.deductStock(quantity));
+        CoreException error =
+                assertThrows(CoreException.class, () -> product.deductStock(quantity));
 
         // assert
         assertThat(error.getErrorType()).isEqualTo(ErrorType.INVALID_REQUEST);
@@ -114,7 +116,8 @@ class ProductTest {
         // arrange: null, 빈 문자열, 공백을 각각 입력한다
 
         // act
-        CoreException error = assertThrows(CoreException.class, () -> Product.create(3, name, 1_000));
+        CoreException error =
+                assertThrows(CoreException.class, () -> Product.create(3, name, 1_000));
 
         // assert
         assertThat(error.getErrorType()).isEqualTo(ErrorType.INVALID_REQUEST);
@@ -126,7 +129,8 @@ class ProductTest {
         String name = "가".repeat(101);
 
         // act
-        CoreException error = assertThrows(CoreException.class, () -> Product.create(3, name, 1_000));
+        CoreException error =
+                assertThrows(CoreException.class, () -> Product.create(3, name, 1_000));
 
         // assert
         assertThat(error.getErrorType()).isEqualTo(ErrorType.INVALID_REQUEST);
@@ -169,6 +173,7 @@ class ProductTest {
         // assert
         assertThat(product.isDeleted()).isTrue();
     }
+
     @Test
     void 삭제된_상품의_정보는_변경할_수_없다() {
         // arrange
@@ -184,6 +189,7 @@ class ProductTest {
         assertThat(product.getName()).isEqualTo("상품");
         assertThat(product.getPrice()).isEqualTo(1_000);
     }
+
     @Test
     void 삭제된_상품의_재고는_설정할_수_없다() {
         // arrange
@@ -198,6 +204,7 @@ class ProductTest {
         assertThat(error.getErrorType()).isEqualTo(ErrorType.PRODUCT_NOT_FOUND);
         assertThat(product.getStock()).isEqualTo(5);
     }
+
     @Test
     void 삭제된_상품의_재고는_차감할_수_없다() {
         // arrange
@@ -212,6 +219,7 @@ class ProductTest {
         assertThat(error.getErrorType()).isEqualTo(ErrorType.PRODUCT_NOT_FOUND);
         assertThat(product.getStock()).isEqualTo(5);
     }
+
     @Test
     void 재고보다_많이_차감하면_재고_부족으로_거절한다() {
         // arrange

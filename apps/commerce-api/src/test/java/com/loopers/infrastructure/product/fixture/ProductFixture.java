@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Component
 @Transactional
@@ -46,6 +47,11 @@ public class ProductFixture {
     @Transactional(readOnly = true)
     public long rowCount() {
         return productRows.count();
+    }
+
+    @Transactional(readOnly = true)
+    public List<Long> activeProductIds(long brandId) {
+        return products.findActiveIdsByBrandId(brandId);
     }
 
     @Transactional(readOnly = true)
