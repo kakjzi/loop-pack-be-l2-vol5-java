@@ -2,6 +2,7 @@ package com.loopers.infrastructure.order;
 
 import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderRepository;
+import com.loopers.domain.order.OrderStatus;
 
 import lombok.RequiredArgsConstructor;
 
@@ -10,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.ZonedDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,6 +35,19 @@ public class OrderRepositoryImpl implements OrderRepository {
                         : repository.findById(order.getId()).orElseThrow();
         entity.update(order);
         return repository.save(entity).toDomain();
+    }
+
+    @Override
+    public boolean confirmIfDraft(Order order) {
+        return repository.confirmIfDraft(
+                        order.getId(),
+                        order.getUserId(),
+                        OrderStatus.DRAFT,
+                        order.getStatus(),
+                        order.getPaidAmount(),
+                        order.getPaymentResult().name(),
+                        ZonedDateTime.now())
+                == 1;
     }
 
     @Override
