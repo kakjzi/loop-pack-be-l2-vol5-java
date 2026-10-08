@@ -36,6 +36,18 @@ public class ProductLikeRepositoryImpl implements ProductLikeRepository {
     }
 
     @Override
+    public void registerIfAbsent(ProductLike like) {
+        entityManager
+                .createNativeQuery(
+                        "insert into product_likes (user_id, product_id, created_at, updated_at) "
+                                + "values (:userId, :productId, CURRENT_TIMESTAMP(6), "
+                                + "CURRENT_TIMESTAMP(6)) on duplicate key update user_id = user_id")
+                .setParameter("userId", like.userId())
+                .setParameter("productId", like.productId())
+                .executeUpdate();
+    }
+
+    @Override
     public void delete(long userId, long productId) {
         entityManager
                 .createQuery(

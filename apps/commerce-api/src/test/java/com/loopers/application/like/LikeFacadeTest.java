@@ -39,23 +39,22 @@ class LikeFacadeTest {
         facade.create(1L, 10);
 
         // assert
-        verify(likes).save(new ProductLike(1, 10));
+        verify(likes).registerIfAbsent(new ProductLike(1, 10));
     }
 
     @Test
-    void 이미_등록된_관계는_다시_저장하지_않는다() {
+    void 저장소의_등록이_정상_완료되면_좋아요_등록은_성공한다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1);
         Product product = Product.restore(10, 1, "상품", 1_000, 0, false);
         when(products.findById(10)).thenReturn(Optional.of(product));
-        when(likes.exists(1, 10)).thenReturn(true);
         CreateLikeFacade facade = new CreateLikeFacade(users, likes, products);
 
         // act
         assertDoesNotThrow(() -> facade.create(1L, 10));
 
         // assert
-        verify(likes, never()).save(any(ProductLike.class));
+        verify(likes).registerIfAbsent(new ProductLike(1, 10));
     }
 
     @Test
@@ -85,12 +84,11 @@ class LikeFacadeTest {
     }
 
     @Test
-    void 삭제된_상품은_기존_관계가_있어도_등록을_거절한다() {
+    void 삭제된_상품은_등록을_거절한다() {
         // arrange
         IdentifyUser users = new IdentifyUser(id -> id == 1);
         Product product = Product.restore(10, 1, "상품", 1_000, 0, true);
         when(products.findById(10)).thenReturn(Optional.of(product));
-        when(likes.exists(1, 10)).thenReturn(true);
         CreateLikeFacade facade = new CreateLikeFacade(users, likes, products);
 
         // act
@@ -98,7 +96,7 @@ class LikeFacadeTest {
 
         // assert
         assertThat(error.getErrorType()).isEqualTo(ErrorType.PRODUCT_NOT_FOUND);
-        verify(likes, never()).save(any(ProductLike.class));
+        verify(likes, never()).registerIfAbsent(any(ProductLike.class));
         verify(likes, never()).delete(1, 10);
     }
 
@@ -127,7 +125,7 @@ class LikeFacadeTest {
 
         // assert
         assertThat(error.getErrorType()).isEqualTo(ErrorType.PRODUCT_NOT_FOUND);
-        verify(likes, never()).save(any(ProductLike.class));
+        verify(likes, never()).registerIfAbsent(any(ProductLike.class));
     }
 
     @Test
@@ -141,7 +139,7 @@ class LikeFacadeTest {
 
         // assert
         assertThat(error.getErrorType()).isEqualTo(ErrorType.USER_NOT_FOUND);
-        verify(likes, never()).save(any(ProductLike.class));
+        verify(likes, never()).registerIfAbsent(any(ProductLike.class));
     }
 
     @Test
@@ -155,7 +153,7 @@ class LikeFacadeTest {
 
         // assert
         assertThat(error.getErrorType()).isEqualTo(ErrorType.INVALID_REQUEST);
-        verify(likes, never()).save(any(ProductLike.class));
+        verify(likes, never()).registerIfAbsent(any(ProductLike.class));
     }
 
     @Test

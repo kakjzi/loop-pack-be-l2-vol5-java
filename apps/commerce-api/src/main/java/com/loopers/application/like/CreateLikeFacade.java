@@ -22,11 +22,13 @@ public class CreateLikeFacade {
 
     public void create(Long userId, long productId) {
         long id = identifyUser.require(userId);
+        requireActiveProduct(productId);
+        likes.registerIfAbsent(new ProductLike(id, productId));
+    }
+
+    private void requireActiveProduct(long productId) {
         products.findById(productId)
                 .orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND))
                 .requireActive();
-        if (!likes.exists(id, productId)) {
-            likes.save(new ProductLike(id, productId));
-        }
     }
 }
