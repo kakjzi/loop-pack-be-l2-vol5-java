@@ -2,6 +2,7 @@ package com.loopers.application.product;
 
 import com.loopers.application.PagePolicy;
 import com.loopers.application.product.query.ProductQuery;
+import com.loopers.application.product.query.ProductSort;
 import com.loopers.application.product.query.ProductView;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -12,8 +13,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -27,10 +26,9 @@ public class GetProductFacade {
 
     public Page<ProductView> list(Long brandId, int page, int size, String sort) {
         PagePolicy.validate(page, size);
-        if ((brandId != null && brandId <= 0)
-                || !Set.of("latest", "price_asc", "likes_desc").contains(sort)) {
+        if (brandId != null && brandId <= 0) {
             throw new CoreException(ErrorType.INVALID_REQUEST);
         }
-        return query.list(brandId, PageRequest.of(page, size), sort);
+        return query.list(brandId, PageRequest.of(page, size), ProductSort.from(sort));
     }
 }

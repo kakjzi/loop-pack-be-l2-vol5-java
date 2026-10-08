@@ -2,6 +2,7 @@ package com.loopers.infrastructure.product;
 
 import com.loopers.application.like.LikedProductQuery;
 import com.loopers.application.product.query.ProductQuery;
+import com.loopers.application.product.query.ProductSort;
 import com.loopers.application.product.query.ProductView;
 
 import lombok.RequiredArgsConstructor;
@@ -45,7 +46,7 @@ public class ProductQueryImpl implements ProductQuery, LikedProductQuery {
     }
 
     @Override
-    public Page<ProductView> list(Long brandId, Pageable pageable, String sort) {
+    public Page<ProductView> list(Long brandId, Pageable pageable, ProductSort sort) {
         String filter = FROM + (brandId == null ? "" : " and p.brand_id=?");
         List<Object> args = new ArrayList<>();
         if (brandId != null) {
@@ -54,9 +55,9 @@ public class ProductQueryImpl implements ProductQuery, LikedProductQuery {
         long total = jdbc.queryForObject("select count(*)" + filter, Long.class, args.toArray());
         String order =
                 switch (sort) {
-                    case "price_asc" -> "p.price asc,p.id desc";
-                    case "likes_desc" -> "like_count desc,p.id desc";
-                    default -> "p.created_at desc,p.id desc";
+                    case PRICE_ASC -> "p.price asc,p.id desc";
+                    case LIKES_DESC -> "like_count desc,p.id desc";
+                    case LATEST -> "p.created_at desc,p.id desc";
                 };
         args.add(pageable.getPageSize());
         args.add(pageable.getOffset());
