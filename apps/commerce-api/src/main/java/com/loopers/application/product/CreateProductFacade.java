@@ -19,12 +19,22 @@ public class CreateProductFacade {
     private final BrandRepository brands;
 
     public ProductInfo create(Long brandId, String name, Long price) {
+        validateRequest(brandId, price);
+        requireActiveBrand(brandId);
+        Product product = Product.create(brandId, name, price);
+
+        return ProductInfo.from(repository.save(product));
+    }
+
+    private void validateRequest(Long brandId, Long price) {
         if (brandId == null || brandId <= 0 || price == null) {
             throw new CoreException(ErrorType.INVALID_REQUEST);
         }
+    }
+
+    private void requireActiveBrand(long brandId) {
         brands.findByIdForUpdate(brandId)
                 .orElseThrow(() -> new CoreException(ErrorType.BRAND_NOT_FOUND))
                 .requireActive();
-        return ProductInfo.from(repository.save(Product.create(brandId, name, price)));
     }
 }

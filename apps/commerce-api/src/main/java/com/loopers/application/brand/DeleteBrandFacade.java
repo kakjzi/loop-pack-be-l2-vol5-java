@@ -19,14 +19,21 @@ public class DeleteBrandFacade {
     private final ProductRepository products;
 
     public void delete(long id) {
-        Brand brand =
-                repository
-                        .findByIdForUpdate(id)
-                        .orElseThrow(() -> new CoreException(ErrorType.BRAND_NOT_FOUND));
-        for (long productId : products.findActiveIdsByBrandId(id)) {
-            products.delete(productId);
-        }
+        Brand brand = findBrandForDeletion(id);
+        deleteAssociatedProducts(id);
         brand.delete();
         repository.save(brand);
+    }
+
+    private Brand findBrandForDeletion(long id) {
+        return repository
+                .findByIdForUpdate(id)
+                .orElseThrow(() -> new CoreException(ErrorType.BRAND_NOT_FOUND));
+    }
+
+    private void deleteAssociatedProducts(long brandId) {
+        for (long productId : products.findActiveIdsByBrandId(brandId)) {
+            products.delete(productId);
+        }
     }
 }

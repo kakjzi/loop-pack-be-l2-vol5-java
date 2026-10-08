@@ -3,6 +3,8 @@ package com.loopers.infrastructure.order;
 import com.loopers.domain.order.Order;
 import com.loopers.domain.order.OrderRepository;
 import com.loopers.domain.order.OrderStatus;
+import com.loopers.support.error.CoreException;
+import com.loopers.support.error.ErrorType;
 
 import lombok.RequiredArgsConstructor;
 
@@ -38,16 +40,19 @@ public class OrderRepositoryImpl implements OrderRepository {
     }
 
     @Override
-    public boolean confirmIfDraft(Order order) {
-        return repository.confirmIfDraft(
+    public void confirmIfDraft(Order order) {
+        int updated =
+                repository.confirmIfDraft(
                         order.getId(),
                         order.getUserId(),
                         OrderStatus.DRAFT,
                         order.getStatus(),
                         order.getPaidAmount(),
                         order.getPaymentResult().name(),
-                        ZonedDateTime.now())
-                == 1;
+                        ZonedDateTime.now());
+        if (updated != 1) {
+            throw new CoreException(ErrorType.INVALID_REQUEST);
+        }
     }
 
     @Override

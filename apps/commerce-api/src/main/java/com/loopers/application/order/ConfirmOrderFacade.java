@@ -27,22 +27,33 @@ public class ConfirmOrderFacade {
 
     public OrderInfo confirm(Long userId, long orderId) {
         long owner = users.require(userId);
-        Order order =
-                orders.findById(orderId)
-                        .filter(value -> value.getUserId() == owner)
-                        .orElseThrow(() -> new CoreException(ErrorType.ORDER_NOT_FOUND));
+        Order order = findOwnedOrder(owner, orderId);
+
+        confirmOrderState(order);
+        deductOrderStock(order);
+        points.deduct(owner, order.getTotalAmount());
+
+        return OrderInfo.from(order);
+    }
+
+    private Order findOwnedOrder(long owner, long orderId) {
+        return orders.findById(orderId)
+                .filter(order -> order.getUserId() == owner)
+                .orElseThrow(() -> new CoreException(ErrorType.ORDER_NOT_FOUND));
+    }
+
+    private void confirmOrderState(Order order) {
         order.confirm();
         // 같은 주문의 경쟁은 첫 상태 전이에서 걸러낸다. 뒤에서 실패하면 이 변경도 함께 롤백된다.
-        if (!orders.confirmIfDraft(order)) {
-            throw new CoreException(ErrorType.INVALID_REQUEST);
-        }
+        orders.confirmIfDraft(order);
+    }
+
+    private void deductOrderStock(Order order) {
         for (OrderItem item :
                 order.getItems().stream()
                         .sorted(Comparator.comparingLong(OrderItem::getProductId))
                         .toList()) {
             products.deductStock(item.getProductId(), item.getQuantity());
         }
-        points.deduct(owner, order.getTotalAmount());
-        return OrderInfo.from(order);
     }
 }
