@@ -25,6 +25,7 @@ import com.loopers.utils.DatabaseCleanUp;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -34,6 +35,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.ZonedDateTime;
+import java.util.List;
+import java.util.Map;
 
 @AutoConfigureMockMvc
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -305,6 +308,94 @@ class ProductApiE2ETest {
         JsonNode items = response.getBody().requiredAt("/data/items");
         assertThat(items.isArray()).isTrue();
         assertThat(items).isEmpty();
+    }
+
+    @ParameterizedTest
+    @CsvSource({
+        "latest,false", "latest,true",
+        "price_asc,false", "price_asc,true",
+        "likes_desc,false", "likes_desc,true"
+    })
+    void 모든_정렬과_브랜드_필터에서_페이지_경계와_전체_개수가_일치한다(
+            String sort, boolean filterByBrand) {
+        Brand brand = brands.createBrand("조회 브랜드");
+        Product first = fixture.createProduct(brand.getId(), "첫 상품", 1_000, 0);
+        Product second = fixture.createProduct(brand.getId(), "둘째 상품", 1_000, 0);
+        Product third = fixture.createProduct(brand.getId(), "좋아요 없는 상품", 3_000, 0);
+        Brand otherBrand = brands.createBrand("다른 브랜드");
+        Product other = fixture.createProduct(otherBrand.getId(), "다른 상품", 500, 0);
+        Product deleted = fixture.createProduct(brand.getId(), "삭제한 상품", 1, 0);
+        fixture.deleteProduct(deleted.getId());
+        Brand deletedBrand = brands.createBrand("삭제한 브랜드");
+        fixture.createProduct(deletedBrand.getId(), "브랜드가 삭제된 상품", 1, 0);
+        brands.deleteBrand(deletedBrand.getId());
+
+        fixture.createdAt(first.getId(), ZonedDateTime.parse("2026-01-03T00:00:00Z"));
+        fixture.createdAt(second.getId(), ZonedDateTime.parse("2026-01-02T00:00:00Z"));
+        fixture.createdAt(third.getId(), ZonedDateTime.parse("2026-01-01T00:00:00Z"));
+        fixture.createdAt(other.getId(), ZonedDateTime.parse("2026-01-04T00:00:00Z"));
+        users.createUser(1);
+        users.createUser(2);
+        users.createUser(3);
+        likes.createLike(1, first.getId());
+        likes.createLike(2, first.getId());
+        likes.createLike(1, second.getId());
+        likes.createLike(1, other.getId());
+        likes.createLike(2, other.getId());
+        likes.createLike(3, other.getId());
+
+        List<Long> expectedIds;
+        if (sort.equals("price_asc")) {
+            expectedIds = filterByBrand
+                    ? List.of(second.getId(), first.getId(), third.getId())
+                    : List.of(other.getId(), second.getId(), first.getId(), third.getId());
+        } else {
+            expectedIds = filterByBrand
+                    ? List.of(first.getId(), second.getId(), third.getId())
+                    : List.of(other.getId(), first.getId(), second.getId(), third.getId());
+        }
+        Map<Long, Long> likeCounts = Map.of(
+                first.getId(), 2L, second.getId(), 1L, third.getId(), 0L, other.getId(), 3L);
+
+        for (int page = 0; page <= 2; page++) {
+            String url = "/api/v1/products?sort=" + sort + "&page=" + page + "&size=2"
+                    + (filterByBrand ? "&brandId=" + brand.getId() : "");
+            var response = rest.getForEntity(url, JsonNode.class);
+
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            JsonNode data = response.getBody().requiredAt("/data");
+            List<Long> pageIds = expectedIds.subList(
+                    Math.min(page * 2, expectedIds.size()),
+                    Math.min((page + 1) * 2, expectedIds.size()));
+            assertThat(data.required("items").findValues("productId"))
+                    .extracting(JsonNode::longValue).containsExactlyElementsOf(pageIds);
+            assertThat(data.required("items").findValues("likeCount"))
+                    .extracting(JsonNode::longValue)
+                    .containsExactlyElementsOf(pageIds.stream().map(likeCounts::get).toList());
+            assertThat(data.required("page").intValue()).isEqualTo(page);
+            assertThat(data.required("size").intValue()).isEqualTo(2);
+            assertThat(data.required("totalElements").longValue()).isEqualTo(expectedIds.size());
+            assertThat(data.required("totalPages").intValue()).isEqualTo(2);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void 큰_OFFSET의_빈_페이지도_정상_응답하고_전체_개수를_유지한다(boolean filterByBrand) {
+        Brand brand = brands.createBrand("브랜드");
+        fixture.createProduct(brand.getId(), "상품", 1_000, 0);
+        String url = "/api/v1/products?page=" + Integer.MAX_VALUE + "&size=100"
+                + (filterByBrand ? "&brandId=" + brand.getId() : "");
+
+        var response = rest.getForEntity(url, JsonNode.class);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+        JsonNode data = response.getBody().requiredAt("/data");
+        assertThat(data.required("items")).isEmpty();
+        assertThat(data.required("page").intValue()).isEqualTo(Integer.MAX_VALUE);
+        assertThat(data.required("size").intValue()).isEqualTo(100);
+        assertThat(data.required("totalElements").longValue()).isEqualTo(1);
+        assertThat(data.required("totalPages").intValue()).isEqualTo(1);
     }
 
     @Test

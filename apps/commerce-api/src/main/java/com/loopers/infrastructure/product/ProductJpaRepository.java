@@ -51,4 +51,76 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, Lo
     // 갱신 실패의 이유를 구분할 때만 사용한다. RR의 과거 스냅샷으로 삭제 여부를 판단하지 않는다.
     @Lock(LockModeType.PESSIMISTIC_READ)
     Optional<ProductJpaEntity> findCurrentById(long id);
+
+    // 상품 목록·상세·좋아요 목록 조회
+    String PRODUCT_FIELDS = """
+            select p.id as productId, p.name as name, p.price as price,
+                   b.id as brandId, b.name as brandName,
+                   (select count(*) from product_likes l where l.product_id = p.id) as likeCount
+            """;
+
+    // 고객에게 노출할 상품의 조건을 목록, 상세, 좋아요 목록과 COUNT에 동일하게 적용한다.
+    String VISIBLE_PRODUCTS = """
+            from products p
+            join brands b on b.id = p.brand_id
+            where p.deleted_at is null and b.deleted_at is null
+            """;
+
+    String BRAND_FILTER = " and p.brand_id = :brandId ";
+    // JPA의 int OFFSET 제한 없이 기존 API의 long OFFSET 범위를 유지한다.
+    String PAGE_LIMIT = " limit :size offset :offset ";
+
+    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS
+            + " order by p.created_at desc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    List<ProductRow> findLatest(@Param("size") int size, @Param("offset") long offset);
+
+    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS
+            + " order by p.price asc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    List<ProductRow> findLowestPrice(@Param("size") int size, @Param("offset") long offset);
+
+    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS
+            + " order by likeCount desc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    List<ProductRow> findMostLiked(@Param("size") int size, @Param("offset") long offset);
+
+    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + BRAND_FILTER
+            + " order by p.created_at desc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    List<ProductRow> findLatestByBrandId(
+            @Param("brandId") long brandId, @Param("size") int size, @Param("offset") long offset);
+
+    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + BRAND_FILTER
+            + " order by p.price asc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    List<ProductRow> findLowestPriceByBrandId(
+            @Param("brandId") long brandId, @Param("size") int size, @Param("offset") long offset);
+
+    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + BRAND_FILTER
+            + " order by likeCount desc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    List<ProductRow> findMostLikedByBrandId(
+            @Param("brandId") long brandId, @Param("size") int size, @Param("offset") long offset);
+
+    @Query(value = "select count(*) " + VISIBLE_PRODUCTS, nativeQuery = true)
+    long countVisible();
+
+    @Query(value = "select count(*) " + VISIBLE_PRODUCTS + BRAND_FILTER, nativeQuery = true)
+    long countVisibleByBrandId(@Param("brandId") long brandId);
+
+    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + " and p.id = :productId", nativeQuery = true)
+    Optional<ProductRow> findVisibleById(@Param("productId") long productId);
+
+    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + """
+             and exists (
+                 select 1 from product_likes own
+                 where own.product_id = p.id and own.user_id = :userId
+             )
+             order by p.id desc
+            """, nativeQuery = true)
+    List<ProductRow> findLikedByUserId(@Param("userId") long userId);
+
+    interface ProductRow {
+        long getProductId();
+        String getName();
+        long getPrice();
+        long getBrandId();
+        String getBrandName();
+        long getLikeCount();
+    }
 }
