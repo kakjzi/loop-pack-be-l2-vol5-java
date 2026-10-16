@@ -1,5 +1,7 @@
 package com.loopers.application.product;
 
+import com.loopers.application.product.query.ProductListCacheInvalidator;
+
 import com.loopers.domain.product.ProductRepository;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
@@ -13,10 +15,12 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class DeleteProductFacade {
+    private final ProductListCacheInvalidator invalidator;
     private final ProductRepository repository;
 
     public void delete(long id) {
         repository.findById(id).orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
         repository.delete(id);
+        invalidator.afterCommit();
     }
 }

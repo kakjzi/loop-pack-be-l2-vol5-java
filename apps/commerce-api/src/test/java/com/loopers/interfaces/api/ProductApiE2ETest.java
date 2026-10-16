@@ -21,6 +21,7 @@ import com.loopers.infrastructure.product.fixture.ProductFixture;
 import com.loopers.infrastructure.user.fixture.UserFixture;
 import com.loopers.interfaces.api.product.ProductDto;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.application.product.query.ProductListCache;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,7 @@ class ProductApiE2ETest {
     @Autowired private ObjectMapper mapper;
 
     @Autowired private DatabaseCleanUp cleanUp;
+    @Autowired private ProductListCache listCache;
 
     private static final String ADMIN_PRODUCTS = "/api-admin/v1/products";
 
@@ -720,6 +722,7 @@ class ProductApiE2ETest {
 
     @AfterEach
     void cleanDatabase() {
+        assertThat(listCache.invalidateAll()).isTrue();
         cleanUp.deleteAllEntities();
     }
 }

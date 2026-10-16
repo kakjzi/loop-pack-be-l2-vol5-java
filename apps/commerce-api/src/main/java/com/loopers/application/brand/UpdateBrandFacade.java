@@ -1,5 +1,7 @@
 package com.loopers.application.brand;
 
+import com.loopers.application.product.query.ProductListCacheInvalidator;
+
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
 import com.loopers.support.error.CoreException;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class UpdateBrandFacade {
+    private final ProductListCacheInvalidator invalidator;
     private final BrandRepository repository;
 
     public BrandInfo update(long id, String name) {
@@ -22,6 +25,8 @@ public class UpdateBrandFacade {
                         .findByIdForUpdate(id)
                         .orElseThrow(() -> new CoreException(ErrorType.BRAND_NOT_FOUND));
         brand.rename(name);
-        return BrandInfo.from(repository.save(brand));
+        BrandInfo result = BrandInfo.from(repository.save(brand));
+        invalidator.afterCommit();
+        return result;
     }
 }

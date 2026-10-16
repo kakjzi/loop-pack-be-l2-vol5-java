@@ -1,5 +1,7 @@
 package com.loopers.application.product;
 
+import com.loopers.application.product.query.ProductListCacheInvalidator;
+
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductRepository;
 import com.loopers.support.error.CoreException;
@@ -14,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class UpdateProductFacade {
+    private final ProductListCacheInvalidator invalidator;
     private final ProductRepository repository;
 
     public ProductInfo update(long id, String name, Long price) {
@@ -25,6 +28,8 @@ public class UpdateProductFacade {
                         .findById(id)
                         .orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
         product.update(name, price);
-        return ProductInfo.from(repository.updateInformation(product));
+        ProductInfo result = ProductInfo.from(repository.updateInformation(product));
+        invalidator.afterCommit();
+        return result;
     }
 }

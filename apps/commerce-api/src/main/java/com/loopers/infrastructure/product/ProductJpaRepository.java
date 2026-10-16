@@ -124,6 +124,9 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, Lo
     List<ProductRow> findMostLikedByBrandId(
             @Param("brandId") long brandId, @Param("size") int size, @Param("offset") long offset);
 
+    @Query(value = "select p.id " + VISIBLE_PRODUCTS + " and p.id in (:ids)", nativeQuery = true)
+    List<Long> findVisibleIds(@Param("ids") List<Long> ids);
+
     @Query(value = "select count(*) " + VISIBLE_PRODUCTS, nativeQuery = true)
     long countVisible();
 

@@ -1,5 +1,7 @@
 package com.loopers.application.brand;
 
+import com.loopers.application.product.query.ProductListCacheInvalidator;
+
 import com.loopers.domain.brand.Brand;
 import com.loopers.domain.brand.BrandRepository;
 import com.loopers.domain.product.ProductRepository;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class DeleteBrandFacade {
+    private final ProductListCacheInvalidator invalidator;
     private final BrandRepository repository;
     private final ProductRepository products;
 
@@ -23,6 +26,7 @@ public class DeleteBrandFacade {
         deleteAssociatedProducts(id);
         brand.delete();
         repository.save(brand);
+        invalidator.afterCommit();
     }
 
     private Brand findBrandForDeletion(long id) {

@@ -1,5 +1,7 @@
 package com.loopers.application.product;
 
+import com.loopers.application.product.query.ProductListCacheInvalidator;
+
 import com.loopers.domain.brand.BrandRepository;
 import com.loopers.domain.product.Product;
 import com.loopers.domain.product.ProductRepository;
@@ -15,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 @Transactional
 public class CreateProductFacade {
+    private final ProductListCacheInvalidator invalidator;
     private final ProductRepository repository;
     private final BrandRepository brands;
 
@@ -23,7 +26,9 @@ public class CreateProductFacade {
         requireActiveBrand(brandId);
         Product product = Product.create(brandId, name, price);
 
-        return ProductInfo.from(repository.save(product));
+        ProductInfo result = ProductInfo.from(repository.save(product));
+        invalidator.afterCommit();
+        return result;
     }
 
     private void validateRequest(Long brandId, Long price) {

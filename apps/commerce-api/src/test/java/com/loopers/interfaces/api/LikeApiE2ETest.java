@@ -13,6 +13,7 @@ import com.loopers.domain.product.Product;
 import com.loopers.infrastructure.product.fixture.ProductFixture;
 import com.loopers.infrastructure.user.fixture.UserFixture;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.application.product.query.ProductListCache;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -39,6 +40,7 @@ class LikeApiE2ETest {
     @Autowired private TestRestTemplate rest;
 
     @Autowired private DatabaseCleanUp cleanUp;
+    @Autowired private ProductListCache listCache;
 
     @Test
     void 좋아요_등록은_요청자와_상품의_관계를_저장한다() {
@@ -432,6 +434,7 @@ class LikeApiE2ETest {
 
     @AfterEach
     void cleanDatabase() {
+        assertThat(listCache.invalidateAll()).isTrue();
         cleanUp.deleteAllEntities();
     }
 }
