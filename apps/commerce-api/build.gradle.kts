@@ -37,6 +37,21 @@ dependencies {
     testImplementation("com.tngtech.archunit:archunit:1.5.0")
 
     // test-fixtures
+    testImplementation("com.navercorp.fixturemonkey:fixture-monkey:1.2.3")
     testImplementation(testFixtures(project(":modules:jpa")))
     testImplementation(testFixtures(project(":modules:redis")))
+}
+
+// 명시적으로 실행할 때만 로컬 DB에 실습 데이터를 저장한다.
+tasks.register<JavaExec>("seedLocalProducts") {
+    group = "application"
+    description = "Fixture Monkey로 로컬 loopers DB에 상품 10,000개를 저장합니다"
+    dependsOn(tasks.named("testClasses"))
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.loopers.seed.LocalProductSeed")
+    workingDir(projectDir)
+    args(layout.buildDirectory.file("local-product-seed-result.json").get().asFile.absolutePath)
+    javaLauncher.set(javaToolchains.launcherFor {
+        languageVersion.set(JavaLanguageVersion.of(21))
+    })
 }

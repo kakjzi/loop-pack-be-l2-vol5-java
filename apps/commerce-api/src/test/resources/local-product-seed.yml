@@ -1,0 +1,30 @@
+# 로컬 시드 전용 설정. application.yml과 jpa.yml의 ddl-auto=create를 읽지 않는다.
+spring:
+  main:
+    web-application-type: none
+    banner-mode: "off"
+  jpa:
+    show-sql: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        timezone.default_storage: NORMALIZE_UTC
+        jdbc.time_zone: UTC
+
+logging:
+  level:
+    root: WARN
+    com.loopers: WARN
+
+datasource:
+  mysql-jpa:
+    main:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      jdbc-url: jdbc:mysql://localhost:3306/loopers
+      username: application
+      password: application
+      maximum-pool-size: 5
+      minimum-idle: 1
+      data-source-properties:
+        rewriteBatchedStatements: true
