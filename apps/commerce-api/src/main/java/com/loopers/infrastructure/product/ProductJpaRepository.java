@@ -56,7 +56,7 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, Lo
     String PRODUCT_FIELDS = """
             select p.id as productId, p.name as name, p.price as price,
                    b.id as brandId, b.name as brandName,
-                   (select count(*) from product_likes l where l.product_id = p.id) as likeCount
+                   coalesce(c.like_count, 0) as likeCount
             """;
 
     // 고객에게 노출할 상품의 조건을 목록, 상세, 좋아요 목록과 COUNT에 동일하게 적용한다.
@@ -70,29 +70,56 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, Lo
     // JPA의 int OFFSET 제한 없이 기존 API의 long OFFSET 범위를 유지한다.
     String PAGE_LIMIT = " limit :size offset :offset ";
 
-    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS
-            + " order by p.created_at desc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    // 카운터가 없는 새 상품은 0개다. 상품별 관계 COUNT 없이 저장된 집계를 읽는다.
+    String COUNTED_PRODUCTS = """
+            from products p
+            join brands b on b.id = p.brand_id
+            left join product_like_counts c on c.product_id = p.id
+            where p.deleted_at is null and b.deleted_at is null
+            """;
+
+    // 좋아요 수와 무관한 정렬은 먼저 페이지를 선택해 카운터 JOIN도 해당 상품에만 수행한다.
+    String LIST_CANDIDATES = """
+            with list_products as (
+                select p.id, p.name, p.price, p.created_at,
+                       b.id as brand_id, b.name as brand_name
+            """ + VISIBLE_PRODUCTS;
+    String LIST_COUNTS = """
+            )
+            select p.id as productId, p.name as name, p.price as price,
+                   p.brand_id as brandId, p.brand_name as brandName,
+                   coalesce(c.like_count, 0) as likeCount
+            from list_products p
+            left join product_like_counts c on c.product_id=p.id
+            """;
+
+    @Query(value = LIST_CANDIDATES
+            + " order by p.created_at desc, p.id desc " + PAGE_LIMIT + LIST_COUNTS
+            + " order by p.created_at desc, p.id desc ", nativeQuery = true)
     List<ProductRow> findLatest(@Param("size") int size, @Param("offset") long offset);
 
-    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS
-            + " order by p.price asc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    @Query(value = LIST_CANDIDATES
+            + " order by p.price asc, p.id desc " + PAGE_LIMIT + LIST_COUNTS
+            + " order by p.price asc, p.id desc ", nativeQuery = true)
     List<ProductRow> findLowestPrice(@Param("size") int size, @Param("offset") long offset);
 
-    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS
+    @Query(value = PRODUCT_FIELDS + COUNTED_PRODUCTS
             + " order by likeCount desc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
     List<ProductRow> findMostLiked(@Param("size") int size, @Param("offset") long offset);
 
-    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + BRAND_FILTER
-            + " order by p.created_at desc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    @Query(value = LIST_CANDIDATES + BRAND_FILTER
+            + " order by p.created_at desc, p.id desc " + PAGE_LIMIT + LIST_COUNTS
+            + " order by p.created_at desc, p.id desc ", nativeQuery = true)
     List<ProductRow> findLatestByBrandId(
             @Param("brandId") long brandId, @Param("size") int size, @Param("offset") long offset);
 
-    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + BRAND_FILTER
-            + " order by p.price asc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
+    @Query(value = LIST_CANDIDATES + BRAND_FILTER
+            + " order by p.price asc, p.id desc " + PAGE_LIMIT + LIST_COUNTS
+            + " order by p.price asc, p.id desc ", nativeQuery = true)
     List<ProductRow> findLowestPriceByBrandId(
             @Param("brandId") long brandId, @Param("size") int size, @Param("offset") long offset);
 
-    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + BRAND_FILTER
+    @Query(value = PRODUCT_FIELDS + COUNTED_PRODUCTS + BRAND_FILTER
             + " order by likeCount desc, p.id desc " + PAGE_LIMIT, nativeQuery = true)
     List<ProductRow> findMostLikedByBrandId(
             @Param("brandId") long brandId, @Param("size") int size, @Param("offset") long offset);
@@ -103,10 +130,10 @@ public interface ProductJpaRepository extends JpaRepository<ProductJpaEntity, Lo
     @Query(value = "select count(*) " + VISIBLE_PRODUCTS + BRAND_FILTER, nativeQuery = true)
     long countVisibleByBrandId(@Param("brandId") long brandId);
 
-    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + " and p.id = :productId", nativeQuery = true)
+    @Query(value = PRODUCT_FIELDS + COUNTED_PRODUCTS + " and p.id = :productId", nativeQuery = true)
     Optional<ProductRow> findVisibleById(@Param("productId") long productId);
 
-    @Query(value = PRODUCT_FIELDS + VISIBLE_PRODUCTS + """
+    @Query(value = PRODUCT_FIELDS + COUNTED_PRODUCTS + """
              and exists (
                  select 1 from product_likes own
                  where own.product_id = p.id and own.user_id = :userId

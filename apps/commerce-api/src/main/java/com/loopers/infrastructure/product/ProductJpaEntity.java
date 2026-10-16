@@ -5,10 +5,13 @@ import com.loopers.domain.product.Product;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "products")
+@Table(name = "products", indexes = @Index(
+        name = "idx_products_brand_price_id",
+        columnList = "brand_id, price ASC, id DESC"))
 public class ProductJpaEntity extends BaseEntity {
     @Column(nullable = false)
     private long brandId;
