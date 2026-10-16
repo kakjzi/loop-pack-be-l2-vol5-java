@@ -38,3 +38,11 @@ out/
 
 ### Kotlin ###
 .kotlin
+
+# 개인 실험 결과·작업 기록은 커밋하지 않는다. SQL과 실행 코드는 별도 관리한다.
+/docs/week4/measurements/
+/docs/week4/implementation-plan.md
+/docs/week4/index-baseline.md
+/docs/week4/likes-aggregation.md
+/docs/week4/popular-product-likes.md
+/docs/week4/like-counter.md

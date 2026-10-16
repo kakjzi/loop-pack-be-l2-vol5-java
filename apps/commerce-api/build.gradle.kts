@@ -34,6 +34,7 @@ dependencies {
     // assignment: admin access and architecture checks
     implementation("org.springframework.boot:spring-boot-starter-security")
     testImplementation("org.springframework.security:spring-security-test")
+    testImplementation("org.testcontainers:mysql")
     testImplementation("com.tngtech.archunit:archunit:1.5.0")
 
     // test-fixtures
@@ -54,4 +55,30 @@ tasks.register<JavaExec>("seedLocalProducts") {
     javaLauncher.set(javaToolchains.launcherFor {
         languageVersion.set(JavaLanguageVersion.of(21))
     })
+}
+
+// 격리된 13306/loopers_offset_bench 전용. 기존 seedLocalProducts 작업과 분리한다.
+tasks.register<JavaExec>("seedOffsetBenchmark") {
+    group = "application"
+    description = "전용 빈 DB에 균등 분포 상품 100만 건과 좋아요 200만 건을 생성합니다"
+    dependsOn(tasks.named("testClasses"))
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.loopers.seed.benchmark.OffsetBenchmarkSeed")
+    workingDir(projectDir)
+    maxHeapSize = "512m"
+    if (providers.gradleProperty("benchmarkSchemaOnly").isPresent) {
+        args("--schema-only")
+    }
+}
+
+// 기존 상품100만 건은 유지하고, 인기20개 상품의 실제 좋아요 관계만 추가한다.
+tasks.register<JavaExec>("seedPopularProductLikes") {
+    group = "application"
+    description = "전용 DB의 인기 상품20개에 사용자당 실제 좋아요 관계를 추가합니다"
+    dependsOn(tasks.named("testClasses"))
+    classpath = sourceSets["test"].runtimeClasspath
+    mainClass.set("com.loopers.seed.benchmark.OffsetBenchmarkSeed")
+    workingDir(projectDir)
+    maxHeapSize = "512m"
+    args("--popular-likes=" + providers.gradleProperty("popularLikeUsers").orElse("150000").get())
 }
