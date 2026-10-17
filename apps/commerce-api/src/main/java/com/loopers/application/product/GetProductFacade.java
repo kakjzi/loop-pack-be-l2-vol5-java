@@ -2,6 +2,7 @@ package com.loopers.application.product;
 
 import com.loopers.application.PagePolicy;
 import com.loopers.application.product.query.ProductQuery;
+import com.loopers.application.product.query.CachedProductList;
 import com.loopers.application.product.query.ProductSort;
 import com.loopers.application.product.query.ProductView;
 import com.loopers.support.error.CoreException;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional(readOnly = true)
 public class GetProductFacade {
     private final ProductQuery query;
+    private final CachedProductList lists;
 
     public ProductView get(long id) {
         return query.find(id).orElseThrow(() -> new CoreException(ErrorType.PRODUCT_NOT_FOUND));
@@ -29,6 +31,6 @@ public class GetProductFacade {
         if (brandId != null && brandId <= 0) {
             throw new CoreException(ErrorType.INVALID_REQUEST);
         }
-        return query.list(brandId, PageRequest.of(page, size), ProductSort.from(sort));
+        return lists.list(brandId, PageRequest.of(page, size), ProductSort.from(sort));
     }
 }

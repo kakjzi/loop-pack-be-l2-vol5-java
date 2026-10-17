@@ -21,6 +21,7 @@ import com.loopers.infrastructure.product.fixture.ProductFixture;
 import com.loopers.infrastructure.user.fixture.UserFixture;
 import com.loopers.interfaces.api.product.ProductDto;
 import com.loopers.utils.DatabaseCleanUp;
+import com.loopers.application.product.query.ProductListCache;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -57,6 +58,7 @@ class ProductApiE2ETest {
     @Autowired private ObjectMapper mapper;
 
     @Autowired private DatabaseCleanUp cleanUp;
+    @Autowired private ProductListCache listCache;
 
     private static final String ADMIN_PRODUCTS = "/api-admin/v1/products";
 
@@ -381,6 +383,59 @@ class ProductApiE2ETest {
 
     @ParameterizedTest
     @ValueSource(booleans = {false, true})
+    void 좋아요순은_전체_후보를_집계하고_동점과_0개를_포함해_페이지를_나눈다(boolean filterByBrand) {
+        Brand brand = brands.createBrand("조회 브랜드");
+        Product popular = fixture.createProduct(brand.getId(), "먼저 등록한 인기 상품", 3_000, 0);
+        Product tied = fixture.createProduct(brand.getId(), "동점 상품", 1_000, 0);
+        Product newerTied = fixture.createProduct(brand.getId(), "나중 등록한 동점 상품", 2_000, 0);
+        Product zero = fixture.createProduct(brand.getId(), "좋아요 0개", 500, 0);
+        Brand otherBrand = brands.createBrand("다른 브랜드");
+        Product other = fixture.createProduct(otherBrand.getId(), "다른 브랜드 인기 상품", 1_000, 0);
+        Product deleted = fixture.createProduct(brand.getId(), "삭제한 인기 상품", 1_000, 0);
+        Brand deletedBrand = brands.createBrand("삭제한 브랜드");
+        Product hidden = fixture.createProduct(deletedBrand.getId(), "노출 불가 인기 상품", 1_000, 0);
+        for (long userId = 1; userId <= 5; userId++) {
+            users.createUser(userId);
+            likes.createLike(userId, deleted.getId());
+            likes.createLike(userId, hidden.getId());
+            if (userId <= 4) {
+                likes.createLike(userId, other.getId());
+            }
+            if (userId <= 3) {
+                likes.createLike(userId, popular.getId());
+            }
+        }
+        likes.createLike(1, tied.getId());
+        likes.createLike(1, newerTied.getId());
+        fixture.deleteProduct(deleted.getId());
+        brands.deleteBrand(deletedBrand.getId());
+        List<Long> expectedIds = filterByBrand
+                ? List.of(popular.getId(), newerTied.getId(), tied.getId(), zero.getId())
+                : List.of(other.getId(), popular.getId(), newerTied.getId(), tied.getId(), zero.getId());
+        Map<Long, Long> expectedCounts = Map.of(
+                other.getId(), 4L, popular.getId(), 3L, newerTied.getId(), 1L,
+                tied.getId(), 1L, zero.getId(), 0L);
+
+        for (int page = 0; page <= expectedIds.size(); page++) {
+            String url = "/api/v1/products?sort=likes_desc&page=" + page + "&size=1"
+                    + (filterByBrand ? "&brandId=" + brand.getId() : "");
+            var response = rest.getForEntity(url, JsonNode.class);
+
+            assertThat(response.getStatusCode().value()).isEqualTo(200);
+            JsonNode data = response.getBody().requiredAt("/data");
+            List<Long> pageIds = expectedIds.subList(page, Math.min(page + 1, expectedIds.size()));
+            assertThat(data.required("items").findValues("productId"))
+                    .extracting(JsonNode::longValue).containsExactlyElementsOf(pageIds);
+            assertThat(data.required("items").findValues("likeCount"))
+                    .extracting(JsonNode::longValue)
+                    .containsExactlyElementsOf(pageIds.stream().map(expectedCounts::get).toList());
+            assertThat(data.required("totalElements").longValue()).isEqualTo(expectedIds.size());
+            assertThat(data.required("totalPages").intValue()).isEqualTo(expectedIds.size());
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
     void 큰_OFFSET의_빈_페이지도_정상_응답하고_전체_개수를_유지한다(boolean filterByBrand) {
         Brand brand = brands.createBrand("브랜드");
         fixture.createProduct(brand.getId(), "상품", 1_000, 0);
@@ -667,6 +722,7 @@ class ProductApiE2ETest {
 
     @AfterEach
     void cleanDatabase() {
+        assertThat(listCache.invalidateAll()).isTrue();
         cleanUp.deleteAllEntities();
     }
 }

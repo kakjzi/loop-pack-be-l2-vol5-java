@@ -14,12 +14,16 @@ import jakarta.persistence.EntityManagerFactory;
 import org.hibernate.SessionFactory;
 import org.hibernate.stat.Statistics;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.domain.PageRequest;
 
-@SpringBootTest(properties = "spring.jpa.properties.hibernate.generate_statistics=true")
+@SpringBootTest(properties = {
+        "spring.jpa.properties.hibernate.generate_statistics=true",
+        "logging.level.org.hibernate.engine.internal.StatisticalLoggingSessionEventListener=OFF"
+})
 class ProductQueryIntegrationTest {
     @Autowired private ProductQuery query;
     @Autowired private ProductFixture products;
@@ -27,36 +31,53 @@ class ProductQueryIntegrationTest {
     @Autowired private EntityManagerFactory entityManagerFactory;
     @Autowired private DatabaseCleanUp cleanUp;
 
+    private Brand brand;
+    private Statistics statistics;
+
+    @BeforeEach
+    void 상품_3개를_준비한다() {
+        brand = brands.createBrand("브랜드");
+        products.createProduct(brand.getId(), "상품0", 1_000, 0);
+        products.createProduct(brand.getId(), "상품1", 1_001, 0);
+        products.createProduct(brand.getId(), "상품2", 1_002, 0);
+        statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+        // 데이터 준비에 사용한 조회는 빼고, 테스트의 상품 조회만 센다.
+        statistics.clear();
+    }
+
     @Test
-    void 전체_개수가_확정되는_페이지에서만_COUNT를_생략하고_상품별_추가_조회가_없다() {
-        Brand brand = brands.createBrand("브랜드");
-        for (int index = 0; index < 3; index++) {
-            products.createProduct(brand.getId(), "상품" + index, 1_000 + index, 0);
-        }
-        Statistics statistics = entityManagerFactory.unwrap(SessionFactory.class).getStatistics();
+    void 첫_페이지_조회() {
+        var page = query.list(null, PageRequest.of(0, 2), ProductSort.PRICE_ASC);
 
-        statistics.clear();
-        var fullPage = query.list(null, PageRequest.of(0, 2), ProductSort.PRICE_ASC);
-        assertThat(fullPage.getContent()).hasSize(2);
-        assertThat(fullPage.getTotalElements()).isEqualTo(3);
+        assertThat(page.getContent()).hasSize(2);
+        assertThat(page.getTotalElements()).isEqualTo(3);
         assertThat(statistics.getQueryExecutionCount()).isEqualTo(2);
+    }
 
-        statistics.clear();
-        var lastPage = query.list(brand.getId(), PageRequest.of(1, 2), ProductSort.PRICE_ASC);
-        assertThat(lastPage.getContent()).hasSize(1);
-        assertThat(lastPage.getTotalElements()).isEqualTo(3);
+    @Test
+    void 마지막_페이지_조회() {
+        var page = query.list(brand.getId(), PageRequest.of(1, 2), ProductSort.PRICE_ASC);
+
+        assertThat(page.getContent()).hasSize(1);
+        assertThat(page.getTotalElements()).isEqualTo(3);
         assertThat(statistics.getQueryExecutionCount()).isEqualTo(1);
+    }
 
-        statistics.clear();
-        var emptyPage = query.list(null, PageRequest.of(2, 2), ProductSort.PRICE_ASC);
-        assertThat(emptyPage.getContent()).isEmpty();
-        assertThat(emptyPage.getTotalElements()).isEqualTo(3);
+    @Test
+    void 범위_밖_페이지_조회() {
+        var page = query.list(null, PageRequest.of(2, 2), ProductSort.PRICE_ASC);
+
+        assertThat(page.getContent()).isEmpty();
+        assertThat(page.getTotalElements()).isEqualTo(3);
         assertThat(statistics.getQueryExecutionCount()).isEqualTo(2);
+    }
 
-        statistics.clear();
-        var firstPage = query.list(brand.getId(), PageRequest.of(0, 20), ProductSort.PRICE_ASC);
-        assertThat(firstPage.getContent()).hasSize(3);
-        assertThat(firstPage.getTotalElements()).isEqualTo(3);
+    @Test
+    void 전체보다_큰_페이지_조회() {
+        var page = query.list(brand.getId(), PageRequest.of(0, 20), ProductSort.PRICE_ASC);
+
+        assertThat(page.getContent()).hasSize(3);
+        assertThat(page.getTotalElements()).isEqualTo(3);
         assertThat(statistics.getQueryExecutionCount()).isEqualTo(1);
     }
 

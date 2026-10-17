@@ -29,6 +29,11 @@ public class ProductQueryImpl implements ProductQuery, LikedProductQuery {
     }
 
     @Override
+    public List<Long> findVisibleIds(List<Long> ids) {
+        return ids.isEmpty() ? List.of() : repository.findVisibleIds(ids);
+    }
+
+    @Override
     public Page<ProductView> list(Long brandId, Pageable pageable, ProductSort sort) {
         List<ProductView> items = findPageRows(brandId, pageable, sort).stream()
                 .map(ProductQueryImpl::toView)
