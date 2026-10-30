@@ -54,6 +54,30 @@ dependencies {
     testImplementation(testFixtures(project(":modules:kafka")))
 }
 
+val week6IntegrationSupportJar by tasks.registering(Jar::class) {
+    enabled = true
+    archiveClassifier.set("week6-integration-support")
+    dependsOn(tasks.named("classes"), tasks.named("testClasses"))
+    from(sourceSets.main.get().output.classesDirs) {
+        exclude("com/loopers/CommerceApiApplication.class")
+    }
+    from(sourceSets.test.get().output.classesDirs) {
+        exclude("**/*Test*.class")
+        include("com/loopers/support/payment/LocalPgServer*.class")
+        include("com/loopers/support/payment/AdjustableClock*.class")
+        include("com/loopers/application/**/fixture/**")
+        include("com/loopers/infrastructure/**/fixture/**")
+        include("com/loopers/config/FixtureMonkeyConfig.class")
+    }
+}
+
+configurations.create("week6IntegrationSupport") {
+    isCanBeConsumed = true
+    isCanBeResolved = false
+    extendsFrom(configurations.testRuntimeClasspath.get())
+    outgoing.artifact(week6IntegrationSupportJar)
+}
+
 // 명시적으로 실행할 때만 로컬 DB에 실습 데이터를 저장한다.
 tasks.register<JavaExec>("seedLocalProducts") {
     group = "application"

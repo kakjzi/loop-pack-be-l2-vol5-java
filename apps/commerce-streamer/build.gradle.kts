@@ -9,6 +9,15 @@ checkstyle {
     maxWarnings = 0
 }
 
+tasks.test {
+    systemProperty("week6.revision", project.version.toString())
+    val workingTree = providers.exec {
+        workingDir(rootProject.projectDir)
+        commandLine("git", "status", "--porcelain")
+    }.standardOutput.asText.get()
+    systemProperty("week6.working-tree-status", if (workingTree.isBlank()) "clean" else "uncommitted")
+}
+
 dependencies {
     // add-ons
     implementation(project(":modules:jpa"))
@@ -31,5 +40,6 @@ dependencies {
     testImplementation(testFixtures(project(":modules:jpa")))
     testImplementation(testFixtures(project(":modules:redis")))
     testImplementation(testFixtures(project(":modules:kafka")))
+    testImplementation(project(path = ":apps:commerce-api", configuration = "week6IntegrationSupport"))
     testImplementation("com.tngtech.archunit:archunit:1.5.0")
 }
