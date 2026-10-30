@@ -23,6 +23,7 @@ dependencies {
     // add-ons
     implementation(project(":modules:jpa"))
     implementation(project(":modules:redis"))
+    implementation(project(":modules:kafka"))
     implementation(project(":supports:jackson"))
     implementation(project(":supports:logging"))
     implementation(project(":supports:monitoring"))
@@ -50,6 +51,7 @@ dependencies {
     testImplementation("com.navercorp.fixturemonkey:fixture-monkey:1.2.3")
     testImplementation(testFixtures(project(":modules:jpa")))
     testImplementation(testFixtures(project(":modules:redis")))
+    testImplementation(testFixtures(project(":modules:kafka")))
 }
 
 // 명시적으로 실행할 때만 로컬 DB에 실습 데이터를 저장한다.
